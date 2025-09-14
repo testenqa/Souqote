@@ -1,0 +1,29 @@
+{
+  "name": "handyman-uae",
+  "version": "1.0.0",
+  "description": "Handyman marketplace platform for Dubai/UAE",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "mobile": "cd mobile && npm start",
+    "build": "cd client && npm run build",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install && cd ../mobile && npm install"
+  },
+  "keywords": [
+    "handyman",
+    "marketplace",
+    "dubai",
+    "uae",
+    "services"
+  ],
+  "author": "Handyman UAE",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4"
+  }
+}
