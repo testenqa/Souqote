@@ -203,6 +203,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: userData.email,
         password: userData.password,
         options: {
+          emailRedirectTo: 'https://souqote.vercel.app/auth/callback',
           data: {
             first_name: userData.first_name,
             last_name: userData.last_name,

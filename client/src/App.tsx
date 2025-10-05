@@ -16,6 +16,7 @@ import RoleBasedRoute from './components/auth/RoleBasedRoute';
 import Home from './pages/Home';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import AuthCallback from './pages/auth/AuthCallback';
 import RFQs from './pages/rfqs/RFQs';
 import RFQDetails from './pages/rfqs/RFQDetails';
 import PostRFQ from './pages/rfqs/PostRFQ';
@@ -110,6 +111,10 @@ const AppContent: React.FC = () => {
                   <Register />
                 </PublicRoute>
               } 
+            />
+            <Route 
+              path="/auth/callback" 
+              element={<AuthCallback />} 
             />
             
             {/* Buyer-only Routes - Vendors cannot access */}
