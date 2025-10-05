@@ -1,6 +1,6 @@
 {
-  "short_name": "Handyman UAE",
-  "name": "Handyman UAE - Professional Services Marketplace",
+  "short_name": "Souqote",
+  "name": "Souqote - Dubai's RFQ Platform",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,6 +10,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
+  "theme_color": "#D97706",
   "background_color": "#ffffff"
 }

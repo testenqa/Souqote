@@ -15,21 +15,21 @@ const Footer: React.FC = () => {
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center">
                 <Briefcase className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold">
-                {isRTL ? 'حرفي الإمارات' : 'Handyman UAE'}
+                {isRTL ? 'سوقوت' : 'Souqote'}
               </span>
             </div>
             <p className="text-gray-300 mb-4 max-w-md">
               {isRTL 
-                ? 'منصة رائدة لربط العملاء بالمحترفين في مختلف المجالات في دولة الإمارات العربية المتحدة. نحن نسهل عملية العثور على الخدمات المناسبة وتقديمها بأعلى معايير الجودة.'
-                : 'Leading platform connecting customers with professionals across various fields in the UAE. We make it easy to find and provide services with the highest quality standards.'
+                ? 'منصة رائدة لربط المشترين مع الموردين المعتمدين في دولة الإمارات العربية المتحدة. نحن نسهل عملية الحصول على عروض أسعار تنافسية وتقديم الخدمات بأعلى معايير الجودة.'
+                : 'Dubai\'s premier RFQ platform connecting buyers with verified vendors. We make it easy to get competitive quotes and provide services with the highest quality standards.'
               }
             </p>
             <div className="flex space-x-4">
-              <a href="mailto:info@handyman-uae.com" className="text-gray-300 hover:text-white transition-colors duration-200">
+              <a href="mailto:info@souqote.com" className="text-gray-300 hover:text-white transition-colors duration-200">
                 <Mail className="w-5 h-5" />
               </a>
               <a href="tel:+971501234567" className="text-gray-300 hover:text-white transition-colors duration-200">
@@ -53,8 +53,13 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/jobs" className="text-gray-300 hover:text-white transition-colors duration-200">
-                  {t('jobs')}
+                <Link to="/rfqs" className="text-gray-300 hover:text-white transition-colors duration-200">
+                  Browse RFQs
+                </Link>
+              </li>
+              <li>
+                <Link to="/vendors" className="text-gray-300 hover:text-white transition-colors duration-200">
+                  Find Vendors
                 </Link>
               </li>
               <li>
@@ -78,22 +83,22 @@ const Footer: React.FC = () => {
             <ul className="space-y-2">
               <li>
                 <span className="text-gray-300">
-                  {t('plumbing')}
+                  Construction Materials
                 </span>
               </li>
               <li>
                 <span className="text-gray-300">
-                  {t('electrical')}
+                  Office Equipment
                 </span>
               </li>
               <li>
                 <span className="text-gray-300">
-                  {t('painting')}
+                  IT Services
                 </span>
               </li>
               <li>
                 <span className="text-gray-300">
-                  {t('cleaning')}
+                  Marketing Services
                 </span>
               </li>
               <li>
@@ -108,7 +113,7 @@ const Footer: React.FC = () => {
         <div className="border-t border-gray-700 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-300 text-sm">
-              © 2024 {isRTL ? 'حرفي الإمارات' : 'Handyman UAE'}. {isRTL ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}
+              © 2024 {isRTL ? 'سوقوت' : 'Souqote'}. {isRTL ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <a href="/privacy" className="text-gray-300 hover:text-white text-sm transition-colors duration-200">

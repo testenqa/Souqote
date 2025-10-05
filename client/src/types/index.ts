@@ -4,19 +4,18 @@ export interface User {
   first_name: string;
   last_name: string;
   phone: string;
-  user_type: 'customer' | 'technician';
+  user_type: 'buyer' | 'vendor' | 'admin';
   avatar_url?: string | null;
   bio?: string | null;
-  years_experience?: number | null;
-  hourly_rate?: number | null;
+  company_name?: string | null;
+  business_license?: string | null;
+  tax_id?: string | null;
   languages?: string[] | null;
   specialties?: string[] | null;
-  emirates_id?: string | null;
-  trade_license?: string | null;
-  insurance_document?: string | null;
   is_verified: boolean;
   rating: number;
-  total_jobs: number;
+  total_rfqs: number;
+  total_quotes: number;
   created_at: string;
   updated_at: string;
 }
@@ -27,11 +26,9 @@ export interface UserProfile {
   bio?: string;
   avatar_url?: string;
   location?: string;
-  emirates_id?: string;
-  trade_license?: string;
-  insurance_document?: string;
-  years_experience?: number;
-  hourly_rate?: number;
+  company_name?: string;
+  business_license?: string;
+  tax_id?: string;
   languages?: string[];
   specialties?: string[];
   availability?: string;
@@ -39,48 +36,56 @@ export interface UserProfile {
   updated_at: string;
 }
 
-export interface Job {
+export interface RFQ {
   id: string;
-  customer_id: string;
+  buyer_id: string;
   title: string;
   description: string;
   category: string;
   location: string;
-  budget: number;
+  budget_min?: number;
+  budget_max?: number;
   urgency: 'low' | 'medium' | 'high';
-  preferred_date: string;
-  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
+  deadline: string;
+  status: 'open' | 'in_progress' | 'awarded' | 'cancelled' | 'expired';
   images?: string[] | null;
+  specifications?: string | null;
+  requirements?: string[] | null;
   created_at: string;
   updated_at: string;
-  customer?: User;
-  bids?: Bid[];
+  buyer?: User;
+  quotes?: Quote[];
 }
 
-export interface Bid {
+export interface Quote {
   id: string;
-  job_id: string;
-  technician_id: string;
+  rfq_id: string;
+  vendor_id: string;
   price: number;
-  estimated_time: string;
+  currency: string;
+  validity_period: number; // in days
+  delivery_time: string;
   message: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  terms_conditions?: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  attachments?: string[] | null;
   created_at: string;
   updated_at: string;
-  technician?: User;
+  vendor?: User;
+  rfq?: RFQ;
 }
 
-export interface JobApplication {
+export interface RFQApplication {
   id: string;
-  job_id: string;
-  professional_id: string;
+  rfq_id: string;
+  vendor_id: string;
   message: string;
   proposed_price: number;
-  estimated_duration: string;
+  estimated_delivery: string;
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
   updated_at: string;
-  professional?: User;
+  vendor?: User;
 }
 
 export interface Category {
@@ -97,7 +102,7 @@ export interface Category {
 
 export interface Review {
   id: string;
-  job_id: string;
+  rfq_id: string;
   reviewer_id: string;
   reviewee_id: string;
   rating: number;
@@ -109,7 +114,7 @@ export interface Review {
 
 export interface Message {
   id: string;
-  job_id: string;
+  rfq_id: string;
   sender_id: string;
   receiver_id: string;
   content: string;
@@ -121,9 +126,9 @@ export interface Message {
 
 export interface Payment {
   id: string;
-  job_id: string;
-  customer_id: string;
-  professional_id: string;
+  rfq_id: string;
+  buyer_id: string;
+  vendor_id: string;
   amount: number;
   commission_amount: number;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
@@ -138,7 +143,7 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'job_application' | 'job_accepted' | 'job_completed' | 'message' | 'review' | 'payment';
+  type: 'rfq_posted' | 'quote_submitted' | 'quote_accepted' | 'rfq_awarded' | 'message' | 'review' | 'payment';
   is_read: boolean;
   data?: any;
   created_at: string;
@@ -164,11 +169,12 @@ export interface SearchFilters {
   budget_min?: number;
   budget_max?: number;
   rating_min?: number;
-  availability?: string;
+  urgency?: 'low' | 'medium' | 'high';
   languages?: string[];
+  specialties?: string[];
 }
 
-export interface JobFormData {
+export interface RFQFormData {
   title: string;
   description: string;
   category_id: string;
@@ -177,15 +183,21 @@ export interface JobFormData {
   longitude?: number;
   budget_min?: number;
   budget_max?: number;
-  preferred_date?: string;
+  deadline?: string;
   urgency: 'low' | 'medium' | 'high';
+  specifications?: string;
+  requirements?: string[];
   images?: File[];
 }
 
-export interface ApplicationFormData {
+export interface QuoteFormData {
   message: string;
-  proposed_price: number;
-  estimated_duration: string;
+  price: number;
+  currency: string;
+  validity_period: number;
+  delivery_time: string;
+  terms_conditions?: string;
+  attachments?: File[];
 }
 
 export interface ReviewFormData {
@@ -196,11 +208,9 @@ export interface ReviewFormData {
 export interface ProfileFormData {
   bio?: string;
   location?: string;
-  emirates_id?: string;
-  trade_license?: string;
-  insurance_document?: string;
-  years_experience?: number;
-  hourly_rate?: number;
+  company_name?: string;
+  business_license?: string;
+  tax_id?: string;
   languages?: string[];
   specialties?: string[];
   availability?: string;

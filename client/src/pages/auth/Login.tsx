@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -47,7 +47,7 @@ const Login: React.FC = () => {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {t('dontHaveAccount')}{' '}
-            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
+            <Link to="/register" className="font-medium text-yellow-600 hover:text-yellow-500">
               {t('register')}
             </Link>
           </p>
@@ -109,7 +109,7 @@ const Login: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <Link to="/forgot-password" className="font-medium text-primary-600 hover:text-primary-500">
+              <Link to="/forgot-password" className="font-medium text-yellow-600 hover:text-yellow-500">
                 {t('forgotPassword')}
               </Link>
             </div>
@@ -119,7 +119,7 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
             >
               {loading ? t('loading') : t('login')}
             </button>

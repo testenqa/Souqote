@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { Menu, X, User, LogOut, Settings, MessageSquare, Briefcase } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { t } = useTranslation();
   const { user, logout, isAuthenticated } = useAuth();
   const { language, setLanguage, isRTL } = useLanguage();
+  const permissions = useUserPermissions();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -30,11 +32,11 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center">
               <Briefcase className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">
-              {isRTL ? 'حرفي الإمارات' : 'Handyman UAE'}
+              {isRTL ? 'سوقوت' : 'Souqote'}
             </span>
           </Link>
 
@@ -42,28 +44,48 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center space-x-8">
             <Link
               to="/"
-              className="text-gray-700 hover:text-primary-600 transition-colors duration-200"
+              className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
             >
               {t('home')}
             </Link>
             
-            {/* Consumer Navigation */}
-            {(!isAuthenticated || (user && user.user_type === 'customer')) && (
+            {/* RFQ Browsing removed - vendors should not see RFQs */}
+            
+            {permissions.canViewMyQuotes ? (
               <Link
-                to="/handymen"
-                className="text-gray-700 hover:text-primary-600 transition-colors duration-200"
+                to="/rfqs"
+                className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
               >
-                Find Handymen
+                Find RFQs
+              </Link>
+            ) : (
+              <Link
+                to="/vendors"
+                className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
+              >
+                Find Vendors
               </Link>
             )}
             
-            {/* Professional Navigation */}
-            {isAuthenticated && user && user.user_type === 'technician' && (
+            {/* Buyer-only Navigation - Hide from vendors */}
+            {(permissions.canPostRFQ || permissions.canViewAdmin) && (
               <Link
-                to="/jobs"
-                className="text-gray-700 hover:text-primary-600 transition-colors duration-200"
+                to="/post-rfq"
+                className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
               >
-                Browse Jobs
+                Post RFQ
+              </Link>
+            )}
+            
+            {/* Vendor Navigation - RFQ browsing removed */}
+            
+            {/* Admin Navigation */}
+            {permissions.canViewAdmin && (
+              <Link
+                to="/admin"
+                className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
+              >
+                Admin Dashboard
               </Link>
             )}
             
@@ -71,17 +93,27 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/messages"
-                  className="text-gray-700 hover:text-primary-600 transition-colors duration-200 flex items-center space-x-1"
+                  className="text-gray-700 hover:text-yellow-600 transition-colors duration-200 flex items-center space-x-1"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>{t('messages')}</span>
                 </Link>
-                <Link
-                  to="/my-jobs"
-                  className="text-gray-700 hover:text-primary-600 transition-colors duration-200"
-                >
-                  {user && user.user_type === 'technician' ? 'My Jobs' : 'My Jobs'}
-                </Link>
+                {permissions.canViewMyRFQs && (
+                  <Link
+                    to="/my-rfqs"
+                    className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
+                  >
+                    My RFQs
+                  </Link>
+                )}
+                {(permissions.canViewMyQuotes || permissions.canViewAdmin) && (
+                  <Link
+                    to="/my-quotes"
+                    className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
+                  >
+                    My Bids
+                  </Link>
+                )}
               </>
             )}
           </div>
@@ -91,7 +123,7 @@ const Navbar: React.FC = () => {
             {/* Language Toggle */}
             <button
               onClick={toggleLanguage}
-              className="px-3 py-1 text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors duration-200 border border-gray-300 rounded-md hover:border-primary-600"
+              className="px-3 py-1 text-sm font-medium text-gray-700 hover:text-yellow-600 transition-colors duration-200 border border-gray-300 rounded-md hover:border-yellow-600"
             >
               {language === 'en' ? 'العربية' : 'English'}
             </button>
@@ -100,9 +132,9 @@ const Navbar: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors duration-200"
+                  className="flex items-center space-x-2 text-gray-700 hover:text-yellow-600 transition-colors duration-200"
                 >
-                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
                     <User className="w-4 h-4" />
                   </div>
                   <span className="text-sm font-medium">
@@ -143,13 +175,13 @@ const Navbar: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-primary-600 transition-colors duration-200"
+                  className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
                 >
                   {t('login')}
                 </Link>
                 <Link
                   to="/register"
-                  className="btn-primary"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
                 >
                   {t('register')}
                 </Link>
@@ -161,7 +193,7 @@ const Navbar: React.FC = () => {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-700 hover:text-primary-600 transition-colors duration-200"
+              className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
             >
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -174,31 +206,62 @@ const Navbar: React.FC = () => {
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50 rounded-lg mt-2">
               <Link
                 to="/"
-                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
+                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {t('home')}
               </Link>
               
-              {/* Consumer Navigation */}
-              {(!isAuthenticated || (user && user.user_type === 'customer')) && (
+              {/* RFQ Browsing removed - vendors should not see RFQs */}
+              
+              {permissions.canViewMyQuotes ? (
                 <Link
-                  to="/handymen"
-                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
+                  to="/rfqs"
+                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Find Handymen
+                  Find RFQs
+                </Link>
+              ) : (
+                <Link
+                  to="/vendors"
+                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Find Vendors
                 </Link>
               )}
               
-              {/* Professional Navigation */}
-              {isAuthenticated && user && user.user_type === 'technician' && (
+              {/* Buyer-only Navigation - Hide from vendors */}
+              {(permissions.canPostRFQ || permissions.canViewAdmin) && (
                 <Link
-                  to="/jobs"
-                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
+                  to="/post-rfq"
+                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Browse Jobs
+                  Post RFQ
+                </Link>
+              )}
+              
+              {/* Vendor Navigation */}
+              {(permissions.canSubmitQuotes || permissions.canViewAdmin) && (
+                <Link
+                  to="/rfqs"
+                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Submit Quotes
+                </Link>
+              )}
+              
+              {/* Admin Navigation */}
+              {permissions.canViewAdmin && (
+                <Link
+                  to="/admin"
+                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin Dashboard
                 </Link>
               )}
               
@@ -206,28 +269,39 @@ const Navbar: React.FC = () => {
                 <>
                   <Link
                     to="/messages"
-                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
+                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {t('messages')}
                   </Link>
-                  <Link
-                    to="/my-jobs"
-                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('myJobs')}
-                  </Link>
+                  {permissions.canViewMyRFQs && (
+                    <Link
+                      to="/my-rfqs"
+                      className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      My RFQs
+                    </Link>
+                  )}
+                  {(permissions.canViewMyQuotes || permissions.canViewAdmin) && (
+                    <Link
+                      to="/my-quotes"
+                      className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      My Bids
+                    </Link>
+                  )}
                   <Link
                     to="/profile"
-                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
+                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {t('profile')}
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
+                    className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
                   >
                     {t('logout')}
                   </button>
@@ -236,14 +310,14 @@ const Navbar: React.FC = () => {
                 <>
                   <Link
                     to="/login"
-                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
+                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {t('login')}
                   </Link>
                   <Link
                     to="/register"
-                    className="block px-3 py-2 text-base font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-md"
+                    className="block px-3 py-2 text-base font-medium text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 rounded-md"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {t('register')}
@@ -254,7 +328,7 @@ const Navbar: React.FC = () => {
               {/* Language Toggle for Mobile */}
               <button
                 onClick={toggleLanguage}
-                className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-md"
+                className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
               >
                 {language === 'en' ? 'العربية' : 'English'}
               </button>

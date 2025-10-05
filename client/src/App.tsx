@@ -2,38 +2,36 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/SimpleAuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/SimpleAuthContext';
 
 // Components
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import RoleBasedRoute from './components/auth/RoleBasedRoute';
 
 // Pages
 import Home from './pages/Home';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import Jobs from './pages/jobs/Jobs';
-import JobDetails from './pages/jobs/JobDetails';
-import PostJob from './pages/jobs/PostJob';
-import MyJobs from './pages/jobs/MyJobs';
-import Handymen from './pages/handymen/Handymen';
-import HandymanProfile from './pages/handymen/HandymanProfile';
-import TechnicianJobs from './pages/technician/TechnicianJobs';
+import RFQs from './pages/rfqs/RFQs';
+import RFQDetails from './pages/rfqs/RFQDetails';
+import PostRFQ from './pages/rfqs/PostRFQ';
+import MyRFQs from './pages/rfqs/MyRFQs';
+import Vendors from './pages/vendors/Vendors';
+import VendorProfile from './pages/vendors/VendorProfile';
+import MyQuotes from './pages/vendors/MyQuotes';
 import Messages from './pages/messages/Messages';
 import Profile from './pages/profile/Profile';
 import EditProfile from './pages/profile/EditProfile';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
-// Test Supabase connection
-import './utils/testSupabase';
+// Test Supabase connection - temporarily disabled to fix loading issue
+// import './utils/testSupabase';
 
-// Component to conditionally render MyJobs or TechnicianJobs
-const ConditionalMyJobs = () => {
-  const { user } = useAuth();
-  return user?.user_type === 'technician' ? <TechnicianJobs /> : <MyJobs />;
-};
+// Removed ConditionalMyRFQs - now using separate routes with role-based access
 
 // Create a client
 const queryClient = new QueryClient({
@@ -82,12 +80,19 @@ const AppContent: React.FC = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
-            <Route path="/handymen" element={<Handymen />} />
-            <Route path="/handymen/:id" element={<HandymanProfile />} />
+            <Route path="/vendors" element={<Vendors />} />
+            <Route path="/vendors/:id" element={<VendorProfile />} />
             
-            {/* Professional Routes - Only for technicians */}
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/jobs/:id" element={<JobDetails />} />
+            {/* RFQ Browsing - Vendors can find RFQs to bid on */}
+            <Route 
+              path="/rfqs" 
+              element={
+                <RoleBasedRoute allowedRoles={['vendor', 'admin']} showAccessDenied={true}>
+                  <RFQs />
+                </RoleBasedRoute>
+              } 
+            />
+            <Route path="/rfqs/:id" element={<RFQDetails />} />
             
             {/* Auth Routes */}
             <Route 
@@ -107,23 +112,37 @@ const AppContent: React.FC = () => {
               } 
             />
             
-            {/* Protected Routes */}
+            {/* Buyer-only Routes - Vendors cannot access */}
             <Route 
-              path="/post-job" 
+              path="/post-rfq" 
               element={
-                <ProtectedRoute>
-                  <PostJob />
-                </ProtectedRoute>
+                <RoleBasedRoute allowedRoles={['buyer', 'admin']} showAccessDenied={true}>
+                  <PostRFQ />
+                </RoleBasedRoute>
               } 
             />
+            
+            {/* Vendor-only Routes - Buyers cannot access */}
             <Route 
-              path="/my-jobs" 
+              path="/my-quotes" 
               element={
-                <ProtectedRoute>
-                  <ConditionalMyJobs />
-                </ProtectedRoute>
+                <RoleBasedRoute allowedRoles={['vendor', 'admin']} showAccessDenied={true}>
+                  <MyQuotes />
+                </RoleBasedRoute>
               } 
             />
+            
+            {/* Buyer-only RFQs Route - Vendors cannot access */}
+            <Route 
+              path="/my-rfqs" 
+              element={
+                <RoleBasedRoute allowedRoles={['buyer', 'admin']} showAccessDenied={true}>
+                  <MyRFQs />
+                </RoleBasedRoute>
+              } 
+            />
+            
+            {/* Common Protected Routes */}
             <Route 
               path="/messages" 
               element={
@@ -146,6 +165,16 @@ const AppContent: React.FC = () => {
                 <ProtectedRoute>
                   <EditProfile />
                 </ProtectedRoute>
+              } 
+            />
+            
+            {/* Admin-only Routes */}
+            <Route 
+              path="/admin" 
+              element={
+                <RoleBasedRoute allowedRoles={['admin']} showAccessDenied={true}>
+                  <AdminDashboard />
+                </RoleBasedRoute>
               } 
             />
             

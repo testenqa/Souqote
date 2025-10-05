@@ -1,8 +1,36 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://lqpoiudemmnacaizemgf.supabase.co';
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxcG9pdWRlbW1uYWNhaXplbWdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2OTY5NjAsImV4cCI6MjA3MzI3Mjk2MH0.Mqu4v3tHEf_numtoTx90xPsoMRH4EB83I0RPMGWP3DQ';
+// Get Supabase configuration from environment variables
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Check if environment variables are set
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase configuration!');
+  console.error('Please create a .env file in the client directory with:');
+  console.error('REACT_APP_SUPABASE_URL=https://your-project-id.supabase.co');
+  console.error('REACT_APP_SUPABASE_ANON_KEY=your-anon-key-here');
+  console.error('');
+  console.error('Get these values from your Supabase project dashboard at https://supabase.com');
+  console.error('See env.example for reference.');
+}
+
+// Validate the URL format
+if (supabaseUrl && !supabaseUrl.startsWith('http://') && !supabaseUrl.startsWith('https://')) {
+  throw new Error(`Invalid Supabase URL: ${supabaseUrl}. Must be a valid HTTP or HTTPS URL.`);
+}
+
+// Create client with fallback to prevent crashes
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  }
+);
 
 export default supabase;

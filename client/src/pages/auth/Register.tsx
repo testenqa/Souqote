@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -18,7 +18,8 @@ const Register: React.FC = () => {
     first_name: '',
     last_name: '',
     phone: '',
-    user_type: 'customer' as 'customer' | 'professional'
+    user_type: 'buyer' as 'buyer' | 'vendor',
+    company_name: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +59,7 @@ const Register: React.FC = () => {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {t('alreadyHaveAccount')}{' '}
-            <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
+            <Link to="/login" className="font-medium text-yellow-600 hover:text-yellow-500">
               {t('login')}
             </Link>
           </p>
@@ -152,7 +153,7 @@ const Register: React.FC = () => {
 
             <div>
               <label htmlFor="user_type" className="form-label">
-                {t('userType')}
+                Account Type
               </label>
               <select
                 id="user_type"
@@ -162,10 +163,32 @@ const Register: React.FC = () => {
                 value={formData.user_type}
                 onChange={handleChange}
               >
-                <option value="customer">{t('customer')}</option>
-                <option value="professional">{t('professional')}</option>
+                <option value="buyer">Buyer (Post RFQs)</option>
+                <option value="vendor">Vendor (Submit Quotes)</option>
               </select>
             </div>
+
+            {formData.user_type === 'vendor' && (
+              <div>
+                <label htmlFor="company_name" className="form-label">
+                  Company Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="company_name"
+                    name="company_name"
+                    type="text"
+                    className="form-input pl-12"
+                    placeholder="Your company name"
+                    value={formData.company_name}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label htmlFor="password" className="form-label">
@@ -225,7 +248,7 @@ const Register: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
             >
               {loading ? t('loading') : t('register')}
             </button>

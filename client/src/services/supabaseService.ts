@@ -7,11 +7,21 @@ export const authService = {
     firstName: string;
     lastName: string;
     phone: string;
-    userType: 'customer' | 'technician';
+    userType: 'buyer' | 'vendor';
+    companyName?: string;
   }) {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          phone: userData.phone,
+          user_type: userData.userType,
+          company_name: userData.companyName,
+        }
+      }
     });
 
     if (authError) throw authError;
@@ -27,6 +37,7 @@ export const authService = {
         last_name: userData.lastName,
         phone: userData.phone,
         user_type: userData.userType,
+        company_name: userData.companyName || null,
       });
 
     if (profileError) throw profileError;
@@ -78,12 +89,12 @@ export const authService = {
   }
 };
 
-// Jobs functions
-export const jobsService = {
-  async createJob(jobData: TablesInsert<'jobs'>) {
+// RFQ functions
+export const rfqService = {
+  async createRFQ(rfqData: TablesInsert<'rfqs'>) {
     const { data, error } = await supabase
-      .from('jobs')
-      .insert(jobData)
+      .from('rfqs')
+      .insert(rfqData)
       .select()
       .single();
 
@@ -91,16 +102,16 @@ export const jobsService = {
     return data;
   },
 
-  async getJobs(filters?: {
+  async getRFQs(filters?: {
     category?: string;
     status?: string;
     search?: string;
   }) {
     let query = supabase
-      .from('jobs')
+      .from('rfqs')
       .select(`
         *,
-        customer:users!jobs_customer_id_fkey(*)
+        buyer:users!rfqs_buyer_id_fkey(*)
       `)
       .order('created_at', { ascending: false });
 
@@ -121,39 +132,39 @@ export const jobsService = {
     return data;
   },
 
-  async getJobById(jobId: string) {
+  async getRFQById(rfqId: string) {
     const { data, error } = await supabase
-      .from('jobs')
+      .from('rfqs')
       .select(`
         *,
-        customer:users!jobs_customer_id_fkey(*)
+        buyer:users!rfqs_buyer_id_fkey(*)
       `)
-      .eq('id', jobId)
+      .eq('id', rfqId)
       .single();
 
     if (error) throw error;
     return data;
   },
 
-  async getUserJobs(userId: string) {
+  async getUserRFQs(userId: string) {
     const { data, error } = await supabase
-      .from('jobs')
+      .from('rfqs')
       .select(`
         *,
-        customer:users!jobs_customer_id_fkey(*)
+        buyer:users!rfqs_buyer_id_fkey(*)
       `)
-      .eq('customer_id', userId)
+      .eq('buyer_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
   },
 
-  async updateJob(jobId: string, updates: TablesUpdate<'jobs'>) {
+  async updateRFQ(rfqId: string, updates: TablesUpdate<'rfqs'>) {
     const { data, error } = await supabase
-      .from('jobs')
+      .from('rfqs')
       .update(updates)
-      .eq('id', jobId)
+      .eq('id', rfqId)
       .select()
       .single();
 
@@ -161,25 +172,25 @@ export const jobsService = {
     return data;
   },
 
-  async deleteJob(jobId: string) {
+  async deleteRFQ(rfqId: string) {
     const { error } = await supabase
-      .from('jobs')
+      .from('rfqs')
       .delete()
-      .eq('id', jobId);
+      .eq('id', rfqId);
 
     if (error) throw error;
   }
 };
 
-// Bids functions
-export const bidsService = {
-  async createBid(bidData: TablesInsert<'bids'>) {
+// Quotes functions
+export const quotesService = {
+  async createQuote(quoteData: TablesInsert<'quotes'>) {
     const { data, error } = await supabase
-      .from('bids')
-      .insert(bidData)
+      .from('quotes')
+      .insert(quoteData)
       .select(`
         *,
-        technician:users!bids_technician_id_fkey(*)
+        vendor:users!quotes_vendor_id_fkey(*)
       `)
       .single();
 
@@ -187,43 +198,43 @@ export const bidsService = {
     return data;
   },
 
-  async getJobBids(jobId: string) {
+  async getRFQQuotes(rfqId: string) {
     const { data, error } = await supabase
-      .from('bids')
+      .from('quotes')
       .select(`
         *,
-        technician:users!bids_technician_id_fkey(*)
+        vendor:users!quotes_vendor_id_fkey(*)
       `)
-      .eq('job_id', jobId)
+      .eq('rfq_id', rfqId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
     return data;
   },
 
-  async getUserBids(userId: string) {
+  async getUserQuotes(userId: string) {
     const { data, error } = await supabase
-      .from('bids')
+      .from('quotes')
       .select(`
         *,
-        job:jobs!bids_job_id_fkey(*),
-        technician:users!bids_technician_id_fkey(*)
+        rfq:rfqs!quotes_rfq_id_fkey(*),
+        vendor:users!quotes_vendor_id_fkey(*)
       `)
-      .eq('technician_id', userId)
+      .eq('vendor_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
   },
 
-  async updateBid(bidId: string, updates: TablesUpdate<'bids'>) {
+  async updateQuote(quoteId: string, updates: TablesUpdate<'quotes'>) {
     const { data, error } = await supabase
-      .from('bids')
+      .from('quotes')
       .update(updates)
-      .eq('id', bidId)
+      .eq('id', quoteId)
       .select(`
         *,
-        technician:users!bids_technician_id_fkey(*)
+        vendor:users!quotes_vendor_id_fkey(*)
       `)
       .single();
 
@@ -231,41 +242,41 @@ export const bidsService = {
     return data;
   },
 
-  async acceptBid(bidId: string) {
-    // First, reject all other bids for this job
-    const { data: bidData } = await supabase
-      .from('bids')
-      .select('job_id')
-      .eq('id', bidId)
+  async acceptQuote(quoteId: string) {
+    // First, reject all other quotes for this RFQ
+    const { data: quoteData } = await supabase
+      .from('quotes')
+      .select('rfq_id')
+      .eq('id', quoteId)
       .single();
 
-    if (bidData) {
+    if (quoteData) {
       await supabase
-        .from('bids')
+        .from('quotes')
         .update({ status: 'rejected' })
-        .eq('job_id', bidData.job_id)
-        .neq('id', bidId);
+        .eq('rfq_id', quoteData.rfq_id)
+        .neq('id', quoteId);
     }
 
-    // Accept the selected bid
+    // Accept the selected quote
     const { data, error } = await supabase
-      .from('bids')
+      .from('quotes')
       .update({ status: 'accepted' })
-      .eq('id', bidId)
+      .eq('id', quoteId)
       .select(`
         *,
-        technician:users!bids_technician_id_fkey(*)
+        vendor:users!quotes_vendor_id_fkey(*)
       `)
       .single();
 
     if (error) throw error;
 
-    // Update job status to in_progress
+    // Update RFQ status to awarded
     if (data) {
       await supabase
-        .from('jobs')
-        .update({ status: 'in_progress' })
-        .eq('id', data.job_id);
+        .from('rfqs')
+        .update({ status: 'awarded' })
+        .eq('id', data.rfq_id);
     }
 
     return data;
@@ -289,7 +300,7 @@ export const messagesService = {
     return data;
   },
 
-  async getJobMessages(jobId: string) {
+  async getRFQMessages(rfqId: string) {
     const { data, error } = await supabase
       .from('messages')
       .select(`
@@ -297,7 +308,7 @@ export const messagesService = {
         sender:users!messages_sender_id_fkey(*),
         receiver:users!messages_receiver_id_fkey(*)
       `)
-      .eq('job_id', jobId)
+      .eq('rfq_id', rfqId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -338,7 +349,7 @@ export const reviewsService = {
         *,
         reviewer:users!reviews_reviewer_id_fkey(*),
         reviewee:users!reviews_reviewee_id_fkey(*),
-        job:jobs!reviews_job_id_fkey(*)
+        rfq:rfqs!reviews_rfq_id_fkey(*)
       `)
       .eq('reviewee_id', userId)
       .order('created_at', { ascending: false });
@@ -350,38 +361,38 @@ export const reviewsService = {
 
 // Real-time subscriptions
 export const realtimeService = {
-  subscribeToJobBids(jobId: string, callback: (payload: any) => void) {
+  subscribeToRFQQuotes(rfqId: string, callback: (payload: any) => void) {
     return supabase
-      .channel(`job-bids-${jobId}`)
+      .channel(`rfq-quotes-${rfqId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'bids',
-        filter: `job_id=eq.${jobId}`
+        table: 'quotes',
+        filter: `rfq_id=eq.${rfqId}`
       }, callback)
       .subscribe();
   },
 
-  subscribeToJobMessages(jobId: string, callback: (payload: any) => void) {
+  subscribeToRFQMessages(rfqId: string, callback: (payload: any) => void) {
     return supabase
-      .channel(`job-messages-${jobId}`)
+      .channel(`rfq-messages-${rfqId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `job_id=eq.${jobId}`
+        filter: `rfq_id=eq.${rfqId}`
       }, callback)
       .subscribe();
   },
 
-  subscribeToUserJobs(userId: string, callback: (payload: any) => void) {
+  subscribeToUserRFQs(userId: string, callback: (payload: any) => void) {
     return supabase
-      .channel(`user-jobs-${userId}`)
+      .channel(`user-rfqs-${userId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'jobs',
-        filter: `customer_id=eq.${userId}`
+        table: 'rfqs',
+        filter: `buyer_id=eq.${userId}`
       }, callback)
       .subscribe();
   }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 
 const Profile: React.FC = () => {
   const { t } = useTranslation();

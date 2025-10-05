@@ -18,8 +18,9 @@ interface RegisterData {
   phone: string;
   first_name: string;
   last_name: string;
-  user_type: 'customer' | 'professional';
+  user_type: 'buyer' | 'vendor';
   password: string;
+  company_name?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,6 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           if (profileError) {
             console.error('Error getting user profile:', profileError);
+            // Don't fail completely, just set loading to false
             setLoading(false);
             return;
           }
@@ -77,7 +79,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    getInitialSession();
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('Auth initialization timeout - setting loading to false');
+      setLoading(false);
+    }, 5000);
+
+    getInitialSession().finally(() => {
+      clearTimeout(timeoutId);
+    });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -162,7 +172,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             phone: userData.phone,
-            user_type: userData.user_type === 'professional' ? 'technician' : 'customer',
+            user_type: userData.user_type,
+            company_name: userData.company_name,
           }
         }
       });
@@ -192,19 +203,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             phone: userData.phone,
-            user_type: userData.user_type === 'professional' ? 'technician' : 'customer',
+            user_type: userData.user_type,
             avatar_url: null,
             bio: null,
-            years_experience: null,
-            hourly_rate: null,
+            company_name: userData.company_name || null,
+            business_license: null,
+            tax_id: null,
             languages: ['English'],
             specialties: null,
-            emirates_id: null,
-            trade_license: null,
-            insurance_document: null,
             is_verified: false,
             rating: 0.0,
-            total_jobs: 0,
+            total_rfqs: 0,
+            total_quotes: 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -220,19 +230,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             phone: userData.phone,
-            user_type: userData.user_type === 'professional' ? 'technician' : 'customer',
+            user_type: userData.user_type,
             avatar_url: null,
             bio: null,
-            years_experience: null,
-            hourly_rate: null,
+            company_name: userData.company_name || null,
+            business_license: null,
+            tax_id: null,
             languages: ['English'],
             specialties: null,
-            emirates_id: null,
-            trade_license: null,
-            insurance_document: null,
             is_verified: false,
             rating: 0,
-            total_jobs: 0,
+            total_rfqs: 0,
+            total_quotes: 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };
