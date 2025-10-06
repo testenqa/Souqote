@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { FileText, Image } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const RFQDetails: React.FC = () => {
@@ -224,6 +225,42 @@ const RFQDetails: React.FC = () => {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Specifications</h3>
                   <p className="text-gray-700 whitespace-pre-wrap">{rfq.specifications}</p>
+                </div>
+              )}
+
+              {rfq.images && rfq.images.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Attachments</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {rfq.images.map((attachment, index) => (
+                      <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
+                            {attachment.includes('.pdf') ? (
+                              <FileText className="w-5 h-5 text-red-500" />
+                            ) : attachment.includes('.doc') ? (
+                              <FileText className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <Image className="w-5 h-5 text-green-500" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {attachment.split('/').pop()}
+                            </p>
+                            <a
+                              href={attachment}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              View/Download
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

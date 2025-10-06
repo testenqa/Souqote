@@ -7,6 +7,7 @@ import { RFQFormData } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import FileUpload from '../../components/ui/file-upload';
 import toast from 'react-hot-toast';
 
 const PostRFQ: React.FC = () => {
@@ -25,6 +26,8 @@ const PostRFQ: React.FC = () => {
     requirements: [''],
     images: undefined,
   });
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const { data: categories, isLoading: categoriesLoading } = useQuery(
     'categories',
@@ -44,26 +47,57 @@ const PostRFQ: React.FC = () => {
     async (rfqData: RFQFormData) => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await supabase
-        .from('rfqs')
-        .insert({
-          buyer_id: user.id,
-          title: rfqData.title,
-          description: rfqData.description,
-          category: rfqData.category_id,
-          location: rfqData.location,
-          budget_min: rfqData.budget_min,
-          budget_max: rfqData.budget_max,
-          deadline: rfqData.deadline,
-          urgency: rfqData.urgency,
-          specifications: rfqData.specifications,
-          requirements: rfqData.requirements?.filter(req => req.trim() !== '') || [],
-        })
-        .select()
-        .single();
+      setUploadingFiles(true);
+      let attachmentUrls: string[] = [];
 
-      if (error) throw error;
-      return data;
+      try {
+        // Upload files if any
+        if (attachments.length > 0) {
+          const uploadPromises = attachments.map(async (file) => {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+            
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('rfq-attachments')
+              .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = supabase.storage
+              .from('rfq-attachments')
+              .getPublicUrl(fileName);
+
+            return urlData.publicUrl;
+          });
+
+          attachmentUrls = await Promise.all(uploadPromises);
+        }
+
+        // Create RFQ with attachment URLs
+        const { data, error } = await supabase
+          .from('rfqs')
+          .insert({
+            buyer_id: user.id,
+            title: rfqData.title,
+            description: rfqData.description,
+            category: rfqData.category_id,
+            location: rfqData.location,
+            budget_min: rfqData.budget_min,
+            budget_max: rfqData.budget_max,
+            deadline: rfqData.deadline,
+            urgency: rfqData.urgency,
+            specifications: rfqData.specifications,
+            requirements: rfqData.requirements?.filter(req => req.trim() !== '') || [],
+            images: attachmentUrls, // Store attachment URLs in images field
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } finally {
+        setUploadingFiles(false);
+      }
     },
     {
       onSuccess: (data) => {
@@ -299,6 +333,22 @@ const PostRFQ: React.FC = () => {
                 </div>
               </div>
 
+              {/* File Attachments */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Attachments (Optional)
+                </label>
+                <p className="text-sm text-gray-500 mb-4">
+                  Upload supporting documents, images, or specifications (PDF, Word, or image files)
+                </p>
+                <FileUpload
+                  onFilesChange={setAttachments}
+                  maxFiles={5}
+                  maxSize={10}
+                  className="mb-4"
+                />
+              </div>
+
               {/* Submit Buttons */}
               <div className="flex justify-end space-x-4 pt-6 border-t">
                 <Button
@@ -310,9 +360,9 @@ const PostRFQ: React.FC = () => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={postRFQMutation.isLoading}
+                  disabled={postRFQMutation.isLoading || uploadingFiles}
                 >
-                  {postRFQMutation.isLoading ? 'Posting RFQ...' : 'Post RFQ'}
+                  {uploadingFiles ? 'Uploading Files...' : postRFQMutation.isLoading ? 'Posting RFQ...' : 'Post RFQ'}
                 </Button>
               </div>
             </form>
