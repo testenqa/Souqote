@@ -264,6 +264,184 @@ const RFQDetails: React.FC = () => {
                 </div>
               )}
 
+              {/* Enhanced RFQ Information */}
+              {(rfq.rfq_reference || rfq.project_reference || rfq.service_type || rfq.currency) && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">RFQ Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {rfq.rfq_reference && (
+                      <div>
+                        <span className="text-gray-500">RFQ Reference:</span>
+                        <p className="font-medium">{rfq.rfq_reference}</p>
+                      </div>
+                    )}
+                    {rfq.project_reference && (
+                      <div>
+                        <span className="text-gray-500">Project Reference:</span>
+                        <p className="font-medium">{rfq.project_reference}</p>
+                      </div>
+                    )}
+                    {rfq.service_type && (
+                      <div>
+                        <span className="text-gray-500">Service Type:</span>
+                        <p className="font-medium">{rfq.service_type}</p>
+                      </div>
+                    )}
+                    {rfq.currency && (
+                      <div>
+                        <span className="text-gray-500">Currency:</span>
+                        <p className="font-medium">{rfq.currency}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Person Information */}
+              {(rfq.contact_person_name || rfq.contact_person_role || rfq.contact_person_phone) && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Contact Person</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {rfq.contact_person_name && (
+                      <div>
+                        <span className="text-gray-500">Name:</span>
+                        <p className="font-medium">{rfq.contact_person_name}</p>
+                      </div>
+                    )}
+                    {rfq.contact_person_role && (
+                      <div>
+                        <span className="text-gray-500">Role:</span>
+                        <p className="font-medium">{rfq.contact_person_role}</p>
+                      </div>
+                    )}
+                    {rfq.contact_person_phone && (
+                      <div>
+                        <span className="text-gray-500">Phone:</span>
+                        <p className="font-medium">{rfq.contact_person_phone}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Items/Services */}
+              {rfq.items && rfq.items.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Items/Services Required</h3>
+                  <div className="space-y-4">
+                    {rfq.items.map((item, index) => (
+                      <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-gray-900">{item.name}</h4>
+                          <div className="text-sm text-gray-600">
+                            {item.quantity} {item.unit}
+                          </div>
+                        </div>
+                        <p className="text-gray-700 mb-2">{item.description}</p>
+                        {item.specifications && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            <span className="font-medium">Specifications:</span> {item.specifications}
+                          </p>
+                        )}
+                        {item.preferred_brand && (
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Preferred Brand:</span> {item.preferred_brand}
+                            {item.acceptable_alternatives && (
+                              <span className="text-green-600 ml-2">(Alternatives acceptable)</span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment & Delivery Information */}
+              {(rfq.payment_terms || rfq.delivery_terms || rfq.delivery_date || rfq.delivery_location || rfq.quotation_validity_days) && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Payment & Delivery</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {rfq.payment_terms && (
+                      <div>
+                        <span className="text-gray-500">Payment Terms:</span>
+                        <p className="font-medium">{rfq.payment_terms}</p>
+                      </div>
+                    )}
+                    {rfq.quotation_validity_days && (
+                      <div>
+                        <span className="text-gray-500">Quote Validity:</span>
+                        <p className="font-medium">{rfq.quotation_validity_days} days</p>
+                      </div>
+                    )}
+                    {rfq.delivery_terms && (
+                      <div>
+                        <span className="text-gray-500">Delivery Terms:</span>
+                        <p className="font-medium">{rfq.delivery_terms}</p>
+                      </div>
+                    )}
+                    {rfq.delivery_date && (
+                      <div>
+                        <span className="text-gray-500">Expected Delivery:</span>
+                        <p className="font-medium text-blue-600">{formatDate(rfq.delivery_date)}</p>
+                      </div>
+                    )}
+                  </div>
+                  {rfq.delivery_location && (
+                    <div className="mt-4">
+                      <span className="text-gray-500">Delivery Location:</span>
+                      <p className="font-medium">{rfq.delivery_location}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* VAT Information */}
+              {rfq.vat_applicable && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Tax Information</h3>
+                  <div className="flex items-center space-x-4">
+                    <span className="text-gray-500">VAT Applicable:</span>
+                    <span className="font-medium text-green-600">Yes</span>
+                    {rfq.vat_rate && (
+                      <>
+                        <span className="text-gray-500">VAT Rate:</span>
+                        <span className="font-medium">{rfq.vat_rate}%</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Installation Requirements */}
+              {rfq.installation_required && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Installation Required</h3>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="text-green-600 font-medium">✓ Installation Required</span>
+                  </div>
+                  {rfq.installation_specifications && (
+                    <p className="text-gray-700">{rfq.installation_specifications}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Warranty Requirements */}
+              {rfq.warranty_requirements && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Warranty Requirements</h3>
+                  <p className="text-gray-700">{rfq.warranty_requirements}</p>
+                </div>
+              )}
+
+              {/* Terms & Conditions */}
+              {rfq.terms_conditions && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Terms & Conditions</h3>
+                  <p className="text-gray-700 whitespace-pre-wrap">{rfq.terms_conditions}</p>
+                </div>
+              )}
+
               {rfq.requirements && rfq.requirements.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Requirements</h3>

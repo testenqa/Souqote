@@ -36,6 +36,17 @@ export interface UserProfile {
   updated_at: string;
 }
 
+export interface RFQItem {
+  id?: string;
+  name: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  specifications?: string;
+  preferred_brand?: string;
+  acceptable_alternatives?: boolean;
+}
+
 export interface RFQ {
   id: string;
   buyer_id: string;
@@ -51,6 +62,26 @@ export interface RFQ {
   images?: string[] | null;
   specifications?: string | null;
   requirements?: string[] | null;
+  // New enhanced fields
+  rfq_reference?: string;
+  items?: RFQItem[];
+  payment_terms?: string;
+  delivery_terms?: string;
+  delivery_date?: string;
+  delivery_location?: string;
+  vat_applicable?: boolean;
+  vat_rate?: number;
+  quotation_validity_days?: number;
+  warranty_requirements?: string;
+  installation_required?: boolean;
+  installation_specifications?: string;
+  currency?: string;
+  terms_conditions?: string;
+  contact_person_name?: string;
+  contact_person_role?: string;
+  contact_person_phone?: string;
+  project_reference?: string;
+  service_type?: string;
   created_at: string;
   updated_at: string;
   buyer?: User;
@@ -188,6 +219,26 @@ export interface RFQFormData {
   specifications?: string;
   requirements?: string[];
   images?: File[];
+  // New enhanced fields
+  rfq_reference?: string;
+  items?: RFQItem[];
+  payment_terms?: string;
+  delivery_terms?: string;
+  delivery_date?: string;
+  delivery_location?: string;
+  vat_applicable?: boolean;
+  vat_rate?: number;
+  quotation_validity_days?: number;
+  warranty_requirements?: string;
+  installation_required?: boolean;
+  installation_specifications?: string;
+  currency?: string;
+  terms_conditions?: string;
+  contact_person_name?: string;
+  contact_person_role?: string;
+  contact_person_phone?: string;
+  project_reference?: string;
+  service_type?: string;
 }
 
 export interface QuoteFormData {
