@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/SimpleAuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useUnreadMessages } from '../../hooks/useUnreadMessages';
 import { Menu, X, User, LogOut, Settings, MessageSquare, Briefcase } from 'lucide-react';
 
 const Navbar: React.FC = () => {
@@ -11,6 +12,7 @@ const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { language, setLanguage, isRTL } = useLanguage();
   const permissions = useUserPermissions();
+  const unreadCount = useUnreadMessages();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -93,10 +95,15 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/messages"
-                  className="text-gray-700 hover:text-yellow-600 transition-colors duration-200 flex items-center space-x-1"
+                  className="text-gray-700 hover:text-yellow-600 transition-colors duration-200 flex items-center space-x-1 relative"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>{t('messages')}</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
                 {permissions.canViewMyRFQs && (
                   <Link
@@ -269,10 +276,15 @@ const Navbar: React.FC = () => {
                 <>
                   <Link
                     to="/messages"
-                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
+                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md flex items-center justify-between"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {t('messages')}
+                    <span>{t('messages')}</span>
+                    {unreadCount > 0 && (
+                      <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
                   {permissions.canViewMyRFQs && (
                     <Link

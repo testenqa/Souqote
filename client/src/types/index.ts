@@ -98,7 +98,7 @@ export interface Quote {
   delivery_time: string;
   message: string;
   terms_conditions?: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'withdrawn';
   attachments?: string[] | null;
   created_at: string;
   updated_at: string;
@@ -146,13 +146,37 @@ export interface Review {
 export interface Message {
   id: string;
   rfq_id: string;
+  quote_id?: string;
   sender_id: string;
   receiver_id: string;
   content: string;
   is_read: boolean;
+  attachments?: string[];
+  thread_id?: string;
   created_at: string;
+  updated_at?: string;
   sender?: User;
   receiver?: User;
+}
+
+export interface ConversationThread {
+  rfq_id: string;
+  quote_id?: string;
+  sender_id: string;
+  receiver_id: string;
+  thread_id: string;
+  message_count: number;
+  unread_count: number;
+  last_message_at: string;
+  last_message: string;
+  other_user?: User;
+  rfq?: RFQ;
+  quote?: Quote;
+}
+
+export interface MessageFormData {
+  content: string;
+  attachments?: File[];
 }
 
 export interface Payment {

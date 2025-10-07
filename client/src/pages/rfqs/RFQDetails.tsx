@@ -8,7 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { FileText, Image } from 'lucide-react';
+import FileUpload from '../../components/ui/file-upload';
+import { FileText, Image, MessageCircle } from 'lucide-react';
+import ConversationThread from '../../components/messages/ConversationThread';
 import toast from 'react-hot-toast';
 
 const RFQDetails: React.FC = () => {
@@ -17,6 +19,8 @@ const RFQDetails: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [showMessageThread, setShowMessageThread] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [quoteForm, setQuoteForm] = useState<QuoteFormData>({
     message: '',
     price: 0,
@@ -24,6 +28,7 @@ const RFQDetails: React.FC = () => {
     validity_period: 30,
     delivery_time: '',
     terms_conditions: '',
+    attachments: [],
   });
 
   const { data: rfq, isLoading: rfqLoading } = useQuery(
@@ -80,6 +85,27 @@ const RFQDetails: React.FC = () => {
     async (quoteData: QuoteFormData) => {
       if (!user || !rfq) throw new Error('User or RFQ not found');
       
+      // Upload attachments if any
+      let attachmentUrls: string[] = [];
+      if (quoteData.attachments && quoteData.attachments.length > 0) {
+        const uploadPromises = quoteData.attachments.map(async (file) => {
+          const fileName = `${user.id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('rfq-attachments')
+            .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('rfq-attachments')
+            .getPublicUrl(fileName);
+
+          return publicUrl;
+        });
+
+        attachmentUrls = await Promise.all(uploadPromises);
+      }
+
       const { data, error } = await supabase
         .from('quotes')
         .insert({
@@ -91,6 +117,7 @@ const RFQDetails: React.FC = () => {
           delivery_time: quoteData.delivery_time,
           message: quoteData.message,
           terms_conditions: quoteData.terms_conditions,
+          attachments: attachmentUrls.length > 0 ? attachmentUrls : null,
         })
         .select()
         .single();
@@ -109,6 +136,7 @@ const RFQDetails: React.FC = () => {
           validity_period: 30,
           delivery_time: '',
           terms_conditions: '',
+          attachments: [],
         });
         queryClient.invalidateQueries(['quotes', id]);
       },
@@ -150,6 +178,44 @@ const RFQDetails: React.FC = () => {
     }
   );
 
+  const withdrawQuoteMutation = useMutation(
+    async (quoteId: string) => {
+      const { data, error } = await supabase
+        .from('quotes')
+        .update({ status: 'withdrawn' })
+        .eq('id', quoteId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Withdraw quote error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Failed to withdraw quote - no data returned');
+      }
+
+      return data;
+    },
+    {
+      onSuccess: () => {
+        toast.success('Quote withdrawn successfully!');
+        queryClient.invalidateQueries(['quotes', id]);
+      },
+      onError: (error: any) => {
+        console.error('Withdraw quote mutation error:', error);
+        if (error.message?.includes('new row violates check constraint')) {
+          toast.error('Database error: "withdrawn" status not available. Please run the SQL migration first.');
+        } else if (error.message?.includes('row-level security')) {
+          toast.error('Permission denied: You may not have permission to withdraw this quote.');
+        } else {
+          toast.error(error.message || 'Failed to withdraw quote');
+        }
+      },
+    }
+  );
+
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
       case 'high': return 'bg-red-100 text-red-800';
@@ -175,7 +241,9 @@ const RFQDetails: React.FC = () => {
     });
   };
 
-  const canSubmitQuote = user?.user_type === 'vendor' && rfq?.status === 'open';
+  // Check if vendor has already submitted a quote (excluding withdrawn quotes)
+  const vendorQuote = quotes?.find(q => q.vendor_id === user?.id && q.status !== 'withdrawn');
+  const canSubmitQuote = user?.user_type === 'vendor' && rfq?.status === 'open' && !vendorQuote;
   const isBuyer = user?.user_type === 'buyer' && rfq?.buyer_id === user.id;
 
   if (rfqLoading) return <LoadingSpinner />;
@@ -200,11 +268,23 @@ const RFQDetails: React.FC = () => {
               </Badge>
             </div>
           </div>
-          {canSubmitQuote && (
-            <Button onClick={() => setShowQuoteForm(true)}>
-              Submit Quote
-            </Button>
-          )}
+          <div className="flex space-x-2">
+            {canSubmitQuote && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowMessageThread(true)}
+                  className="flex items-center space-x-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Message Buyer</span>
+                </Button>
+                <Button onClick={() => setShowQuoteForm(true)}>
+                  Submit Quote
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -482,6 +562,133 @@ const RFQDetails: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Vendor's Submitted Quote */}
+          {vendorQuote && user?.user_type === 'vendor' && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Your Submitted Quote</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`border rounded-lg p-4 ${
+                  vendorQuote.status === 'accepted' ? 'border-green-200 bg-green-50' : 
+                  vendorQuote.status === 'rejected' ? 'border-red-200 bg-red-50' : 
+                  'border-gray-200'
+                }`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Quote Details</h4>
+                      <Badge className={
+                        vendorQuote.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                        vendorQuote.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        vendorQuote.status === 'expired' ? 'bg-gray-100 text-gray-800' :
+                        vendorQuote.status === 'withdrawn' ? 'bg-orange-100 text-orange-800' :
+                        'bg-blue-100 text-blue-800'
+                      }>
+                        {vendorQuote.status.charAt(0).toUpperCase() + vendorQuote.status.slice(1)}
+                      </Badge>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {formatCurrency(vendorQuote.price, vendorQuote.currency)}
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        Delivery: {vendorQuote.delivery_time}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <h5 className="font-medium text-gray-900 mb-1">Your Message:</h5>
+                    <p className="text-gray-700">{vendorQuote.message}</p>
+                  </div>
+
+                  {vendorQuote.terms_conditions && (
+                    <div className="mb-3">
+                      <h5 className="font-medium text-gray-900 mb-1">Terms & Conditions:</h5>
+                      <p className="text-sm text-gray-600">{vendorQuote.terms_conditions}</p>
+                    </div>
+                  )}
+
+                  {vendorQuote.attachments && vendorQuote.attachments.length > 0 && (
+                    <div className="mb-3 pb-3 border-b">
+                      <h5 className="text-sm font-medium text-gray-700 mb-2">Attachments:</h5>
+                      <div className="space-y-2">
+                        {vendorQuote.attachments.map((attachment, index) => {
+                          const fileName = attachment.split('/').pop() || 'file';
+                          const isPdf = attachment.toLowerCase().endsWith('.pdf');
+                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment);
+                          
+                          return (
+                            <a
+                              key={index}
+                              href={attachment}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center space-x-2 p-2 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+                            >
+                              {isPdf ? (
+                                <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+                              ) : isImage ? (
+                                <Image className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                              )}
+                              <span className="text-sm text-blue-600 hover:underline truncate">
+                                {decodeURIComponent(fileName)}
+                              </span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center text-sm text-gray-500">
+                    <span>Valid for {vendorQuote.validity_period} days</span>
+                    <span>Submitted {formatDate(vendorQuote.created_at)}</span>
+                  </div>
+
+                  {vendorQuote.status === 'accepted' && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-green-600 font-medium">✓ Your quote has been accepted!</p>
+                    </div>
+                  )}
+
+                  {vendorQuote.status === 'rejected' && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-red-600 font-medium">✗ Your quote was not accepted</p>
+                    </div>
+                  )}
+
+                  {vendorQuote.status === 'withdrawn' && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-orange-600 font-medium">⊘ Quote Withdrawn</p>
+                      <p className="text-sm text-gray-600 mt-1">You can submit a new quote for this RFQ</p>
+                    </div>
+                  )}
+
+                  {vendorQuote.status === 'pending' && rfq?.status === 'open' && (
+                    <div className="mt-3 pt-3 border-t flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to withdraw this quote? You will be able to submit a new quote after withdrawal.')) {
+                            withdrawQuoteMutation.mutate(vendorQuote.id);
+                          }
+                        }}
+                        disabled={withdrawQuoteMutation.isLoading}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        {withdrawQuoteMutation.isLoading ? 'Withdrawing...' : 'Withdraw Quote'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Quote Form */}
           {showQuoteForm && (
             <Card className="mb-6">
@@ -551,6 +758,20 @@ const RFQDetails: React.FC = () => {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Attachments (Optional)
+                    </label>
+                    <FileUpload
+                      onFilesChange={(files: File[]) => setQuoteForm({ ...quoteForm, attachments: files })}
+                      maxFiles={5}
+                      maxSize={10}
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Upload supporting documents, images, or proposals (PDF, Word, or Image files, max 10MB each)
+                    </p>
+                  </div>
+
                   <div className="flex justify-end space-x-3">
                     <Button
                       type="button"
@@ -563,38 +784,34 @@ const RFQDetails: React.FC = () => {
                       type="submit"
                       disabled={submitQuoteMutation.isLoading}
                     >
-                      {submitQuoteMutation.isLoading ? 'Submitting...' : 'Submit Quote'}
+                      {submitQuoteMutation.isLoading 
+                        ? (quoteForm.attachments && quoteForm.attachments.length > 0 
+                          ? 'Uploading Files...' 
+                          : 'Submitting...') 
+                        : 'Submit Quote'}
                     </Button>
                   </div>
                 </form>
               </CardContent>
             </Card>
           )}
+        </div>
 
-          {/* Quotes */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Quotes ({quotes?.length || 0})
-                {isBuyer && rfq.status === 'open' && (
-                  <span className="text-sm font-normal text-gray-500 ml-2">
-                    - You can accept quotes
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {quotesLoading ? (
-                <LoadingSpinner />
-              ) : quotes && quotes.length > 0 ? (
+        {/* Quotes Section - Only visible to buyer */}
+        {rfq.buyer_id === user?.id && quotes && quotes.length > 0 && (
+          <div className="lg:col-span-2">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Quotes Received ({quotes.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-4">
                   {quotes.map((quote) => (
-                    <div
-                      key={quote.id}
-                      className={`border rounded-lg p-4 ${
-                        quote.status === 'accepted' ? 'border-green-200 bg-green-50' : 'border-gray-200'
-                      }`}
-                    >
+                    <div key={quote.id} className={`border rounded-lg p-4 ${
+                      quote.status === 'accepted' ? 'bg-green-50 border-green-200' :
+                      quote.status === 'withdrawn' ? 'bg-orange-50 border-orange-200' :
+                      'bg-gray-50'
+                    }`}>
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <h4 className="font-semibold text-gray-900">
@@ -603,62 +820,101 @@ const RFQDetails: React.FC = () => {
                           {quote.vendor?.company_name && (
                             <p className="text-sm text-gray-600">{quote.vendor.company_name}</p>
                           )}
+                          <Badge className={
+                            quote.status === 'accepted' ? 'bg-green-100 text-green-800 mt-1' :
+                            quote.status === 'rejected' ? 'bg-red-100 text-red-800 mt-1' :
+                            quote.status === 'expired' ? 'bg-gray-100 text-gray-800 mt-1' :
+                            quote.status === 'withdrawn' ? 'bg-orange-100 text-orange-800 mt-1' :
+                            'bg-blue-100 text-blue-800 mt-1'
+                          }>
+                            {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                          </Badge>
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-blue-600">
                             {formatCurrency(quote.price, quote.currency)}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500">
                             Delivery: {quote.delivery_time}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-gray-700 mb-3">{quote.message}</p>
+                      
+                      {quote.attachments && quote.attachments.length > 0 && (
+                        <div className="mb-3 pb-3 border-b">
+                          <h5 className="text-sm font-medium text-gray-700 mb-2">Attachments:</h5>
+                          <div className="space-y-2">
+                            {quote.attachments.map((attachment, index) => {
+                              const fileName = attachment.split('/').pop() || 'file';
+                              const isPdf = attachment.toLowerCase().endsWith('.pdf');
+                              const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment);
+                              
+                              return (
+                                <a
+                                  key={index}
+                                  href={attachment}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center space-x-2 p-2 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+                                >
+                                  {isPdf ? (
+                                    <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                  ) : isImage ? (
+                                    <Image className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                  ) : (
+                                    <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                  )}
+                                  <span className="text-sm text-blue-600 hover:underline truncate">
+                                    {decodeURIComponent(fileName)}
+                                  </span>
+                                </a>
+                              );
+                            })}
                           </div>
                         </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center pt-3 border-t">
+                        <div className="text-sm text-gray-500">
+                          <span>Valid for {quote.validity_period} days</span>
+                          <span className="mx-2">•</span>
+                          <span>Submitted {formatDate(quote.created_at)}</span>
+                        </div>
+                        <div className="flex space-x-2">
+                          {quote.status === 'withdrawn' ? (
+                            <p className="text-orange-600 font-medium">⊘ Quote Withdrawn</p>
+                          ) : (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedQuote(quote);
+                                  setShowMessageThread(true);
+                                }}
+                                className="flex items-center space-x-1"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                                <span>Message Vendor</span>
+                              </Button>
+                              {quote.status === 'pending' && (
+                                <Button size="sm">
+                                  Accept Quote
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
-
-                      <p className="text-gray-700 mb-3">{quote.message}</p>
-
-                      {quote.terms_conditions && (
-                        <div className="mb-3">
-                          <h5 className="font-medium text-gray-900 mb-1">Terms & Conditions:</h5>
-                          <p className="text-sm text-gray-600">{quote.terms_conditions}</p>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between items-center text-sm text-gray-500">
-                        <span>Valid for {quote.validity_period} days</span>
-                        <span>Submitted {formatDate(quote.created_at)}</span>
-                      </div>
-
-                      {isBuyer && rfq.status === 'open' && quote.status === 'pending' && (
-                        <div className="mt-3 pt-3 border-t">
-                          <Button
-                            size="sm"
-                            onClick={() => acceptQuoteMutation.mutate(quote.id)}
-                            disabled={acceptQuoteMutation.isLoading}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            {acceptQuoteMutation.isLoading ? 'Accepting...' : 'Accept Quote'}
-                          </Button>
-                        </div>
-                      )}
-
-                      {quote.status === 'accepted' && (
-                        <div className="mt-3 pt-3 border-t">
-                          <Badge className="bg-green-100 text-green-800">
-                            ✓ Accepted
-                          </Badge>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  No quotes submitted yet
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Sidebar */}
         <div className="lg:col-span-1">
@@ -719,6 +975,41 @@ const RFQDetails: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Message Thread Modal */}
+      {showMessageThread && rfq && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Only close if clicking the backdrop, not the modal content
+            if (e.target === e.currentTarget) {
+              setShowMessageThread(false);
+              setSelectedQuote(null);
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg max-w-4xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ConversationThread
+              rfqId={rfq.id}
+              otherUserId={selectedQuote ? selectedQuote.vendor_id : rfq.buyer_id}
+              otherUserName={
+                selectedQuote 
+                  ? `${selectedQuote.vendor?.first_name} ${selectedQuote.vendor?.last_name}`
+                  : `${rfq.buyer?.first_name} ${rfq.buyer?.last_name}`
+              }
+              quoteId={selectedQuote?.id}
+              quoteStatus={selectedQuote?.status}
+              onClose={() => {
+                setShowMessageThread(false);
+                setSelectedQuote(null);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
