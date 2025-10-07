@@ -8,10 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ConversationThread from '../../components/messages/ConversationThread';
+import { MessageCircle } from 'lucide-react';
 
 const MyQuotes: React.FC = () => {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [showMessageThread, setShowMessageThread] = useState(false);
 
   const { data: quotes, isLoading, error } = useQuery(
     ['my-quotes', user?.id, statusFilter],
@@ -260,8 +264,17 @@ const MyQuotes: React.FC = () => {
                       View RFQ
                     </Button>
                   </Link>
-                  <Button variant="outline" size="sm">
-                    Messages
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedQuote(quote);
+                      setShowMessageThread(true);
+                    }}
+                    className="flex items-center space-x-1"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Message Buyer</span>
                   </Button>
                 </div>
               </div>
@@ -281,6 +294,37 @@ const MyQuotes: React.FC = () => {
           <Link to="/rfqs">
             <Button>Browse Available RFQs</Button>
           </Link>
+        </div>
+      )}
+
+      {/* Message Thread Modal */}
+      {showMessageThread && selectedQuote && selectedQuote.rfq && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Only close if clicking the backdrop, not the modal content
+            if (e.target === e.currentTarget) {
+              setShowMessageThread(false);
+              setSelectedQuote(null);
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg max-w-4xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ConversationThread
+              rfqId={selectedQuote.rfq.id}
+              otherUserId={selectedQuote.rfq.buyer?.id || ''}
+              otherUserName={`${selectedQuote.rfq.buyer?.first_name} ${selectedQuote.rfq.buyer?.last_name}`}
+              quoteId={selectedQuote.id}
+              quoteStatus={selectedQuote.status}
+              onClose={() => {
+                setShowMessageThread(false);
+                setSelectedQuote(null);
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
