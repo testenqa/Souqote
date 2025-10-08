@@ -26,6 +26,7 @@ const RFQDetails: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
   const [quoteForm, setQuoteForm] = useState<QuoteFormData>({
     message: '',
     price: 0,
