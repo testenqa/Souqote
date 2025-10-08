@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/SimpleAuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
-import { Menu, X, User, LogOut, Settings, MessageSquare, Briefcase } from 'lucide-react';
+import { Menu, X, User, LogOut, MessageSquare, Briefcase } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { t } = useTranslation();
@@ -53,14 +53,18 @@ const Navbar: React.FC = () => {
             
             {/* RFQ Browsing removed - vendors should not see RFQs */}
             
-            {permissions.canViewMyQuotes ? (
+            {/* Show Find RFQs for vendors only */}
+            {permissions.canViewMyQuotes && (
               <Link
                 to="/rfqs"
                 className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
               >
                 Find RFQs
               </Link>
-            ) : (
+            )}
+            
+            {/* Show Find Vendors for buyers only */}
+            {permissions.canPostRFQ && (
               <Link
                 to="/vendors"
                 className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
@@ -69,8 +73,8 @@ const Navbar: React.FC = () => {
               </Link>
             )}
             
-            {/* Buyer-only Navigation - Hide from vendors */}
-            {(permissions.canPostRFQ || permissions.canViewAdmin) && (
+            {/* Buyer-only Navigation - Hide from vendors and admins */}
+            {permissions.canPostRFQ && (
               <Link
                 to="/post-rfq"
                 className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
@@ -80,6 +84,14 @@ const Navbar: React.FC = () => {
             )}
             
             {/* Vendor Navigation - RFQ browsing removed */}
+            {permissions.canSubmitQuotes && (
+              <Link
+                to="/vendor-onboarding"
+                className="text-gray-700 hover:text-yellow-600 transition-colors duration-200"
+              >
+                Complete Profile
+              </Link>
+            )}
             
             {/* Admin Navigation */}
             {permissions.canViewAdmin && (
@@ -160,14 +172,6 @@ const Navbar: React.FC = () => {
                       <User className="w-4 h-4 mr-2" />
                       {t('profile')}
                     </Link>
-                    <Link
-                      to="/profile/edit"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      {t('editProfile')}
-                    </Link>
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -221,7 +225,8 @@ const Navbar: React.FC = () => {
               
               {/* RFQ Browsing removed - vendors should not see RFQs */}
               
-              {permissions.canViewMyQuotes ? (
+              {/* Show Find RFQs for vendors only */}
+              {permissions.canViewMyQuotes && (
                 <Link
                   to="/rfqs"
                   className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
@@ -229,7 +234,10 @@ const Navbar: React.FC = () => {
                 >
                   Find RFQs
                 </Link>
-              ) : (
+              )}
+              
+              {/* Show Find Vendors for buyers only */}
+              {permissions.canPostRFQ && (
                 <Link
                   to="/vendors"
                   className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
@@ -239,8 +247,8 @@ const Navbar: React.FC = () => {
                 </Link>
               )}
               
-              {/* Buyer-only Navigation - Hide from vendors */}
-              {(permissions.canPostRFQ || permissions.canViewAdmin) && (
+              {/* Buyer-only Navigation - Hide from vendors and admins */}
+              {permissions.canPostRFQ && (
                 <Link
                   to="/post-rfq"
                   className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
@@ -258,6 +266,16 @@ const Navbar: React.FC = () => {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Submit Quotes
+                </Link>
+              )}
+              
+              {permissions.canSubmitQuotes && (
+                <Link
+                  to="/vendor-onboarding"
+                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-yellow-600 hover:bg-gray-100 rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Complete Profile
                 </Link>
               )}
               

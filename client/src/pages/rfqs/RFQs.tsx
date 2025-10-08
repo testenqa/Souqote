@@ -13,6 +13,11 @@ const RFQs: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedUrgency, setSelectedUrgency] = useState('');
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const { data: rfqs, isLoading, error } = useQuery(
     ['rfqs', searchTerm, selectedCategory, selectedUrgency],
     async () => {

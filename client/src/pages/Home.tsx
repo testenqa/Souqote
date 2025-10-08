@@ -114,8 +114,8 @@ const Home: React.FC = () => {
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    className="!border-white !text-white hover:!bg-white hover:!text-yellow-600 text-lg px-8 py-4"
-                    onClick={() => navigate('/my-rfqs')}
+                    className="!border-white !text-yellow-600 hover:!bg-gray-100 hover:!text-yellow-600 text-lg px-8 py-4 !bg-white"
+                    onClick={() => navigate('/my-quotes')}
                   >
                     My Quotes
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -284,18 +284,21 @@ const Home: React.FC = () => {
             Join thousands of businesses who trust Souqote with their procurement needs
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              className="!bg-yellow-600 hover:!bg-yellow-700 text-lg px-8 py-4"
-              onClick={() => navigate('/post-rfq')}
-            >
-              Post Your First RFQ
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            {/* Only show "Post Your First RFQ" for buyers and unauthenticated users */}
+            {(user?.user_type === 'buyer' || !user) && (
+              <Button 
+                size="lg" 
+                className="!bg-yellow-600 hover:!bg-yellow-700 text-lg px-8 py-4"
+                onClick={() => navigate('/post-rfq')}
+              >
+                Post RFQ
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            )}
             <Button 
               size="lg" 
               variant="outline" 
-              className="!border-white !text-white hover:!bg-white hover:!text-yellow-600 text-lg px-8 py-4"
+              className="!border-white !text-gray-900 hover:!bg-gray-100 hover:!text-gray-900 text-lg px-8 py-4 !bg-white"
               onClick={() => navigate(user?.user_type === 'vendor' ? '/rfqs' : '/vendors')}
             >
               {user?.user_type === 'vendor' ? 'Browse RFQs' : 'Find Vendors'}
