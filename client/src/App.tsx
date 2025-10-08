@@ -24,10 +24,12 @@ import MyRFQs from './pages/rfqs/MyRFQs';
 import Vendors from './pages/vendors/Vendors';
 import VendorProfile from './pages/vendors/VendorProfile';
 import MyQuotes from './pages/vendors/MyQuotes';
+import VendorOnboarding from './pages/vendors/VendorOnboarding';
 import MessagesPage from './pages/messages/MessagesPage';
 import Profile from './pages/profile/Profile';
 import EditProfile from './pages/profile/EditProfile';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
 
 // Test Supabase connection - temporarily disabled to fix loading issue
 // import './utils/testSupabase';
@@ -136,6 +138,14 @@ const AppContent: React.FC = () => {
                 </RoleBasedRoute>
               } 
             />
+            <Route 
+              path="/vendor-onboarding" 
+              element={
+                <RoleBasedRoute allowedRoles={['vendor', 'admin']} showAccessDenied={true}>
+                  <VendorOnboarding />
+                </RoleBasedRoute>
+              } 
+            />
             
             {/* Buyer-only RFQs Route - Vendors cannot access */}
             <Route 
@@ -179,6 +189,14 @@ const AppContent: React.FC = () => {
               element={
                 <RoleBasedRoute allowedRoles={['admin']} showAccessDenied={true}>
                   <AdminDashboard />
+                </RoleBasedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users" 
+              element={
+                <RoleBasedRoute allowedRoles={['admin']} showAccessDenied={true}>
+                  <UserManagement />
                 </RoleBasedRoute>
               } 
             />

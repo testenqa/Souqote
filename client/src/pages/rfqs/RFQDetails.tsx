@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { supabase } from '../../lib/supabase';
@@ -21,6 +21,11 @@ const RFQDetails: React.FC = () => {
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showMessageThread, setShowMessageThread] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [quoteForm, setQuoteForm] = useState<QuoteFormData>({
     message: '',
     price: 0,

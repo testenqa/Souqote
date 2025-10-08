@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { supabase } from '../../lib/supabase';
@@ -16,6 +16,11 @@ const MyQuotes: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [showMessageThread, setShowMessageThread] = useState(false);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const { data: quotes, isLoading, error } = useQuery(
     ['my-quotes', user?.id, statusFilter],

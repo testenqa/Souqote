@@ -42,11 +42,11 @@ export const useUserPermissions = (): UserPermissions => {
   const isAdmin = user.user_type === 'admin';
 
   return {
-    // Buyer-only permissions (vendors cannot access these)
+    // Buyer-only permissions (vendors and admins cannot access these)
     canPostRFQ: isBuyer, // Only buyers can post RFQs
     canViewMyRFQs: isBuyer, // Only buyers can view their own RFQs
     
-    // Vendor-only permissions (buyers cannot access these)
+    // Vendor-only permissions (buyers and admins cannot access these)
     canSubmitQuotes: isVendor, // Only vendors can submit quotes
     canViewMyQuotes: isVendor, // Only vendors can view their own quotes
     canBrowseRFQs: isVendor, // Only vendors can browse RFQs

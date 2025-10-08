@@ -179,6 +179,247 @@ export interface MessageFormData {
   attachments?: File[];
 }
 
+// ============================================================================
+// VENDOR ONBOARDING & VERIFICATION TYPES
+// ============================================================================
+
+export type VendorVerificationStatus = 'pending' | 'under_review' | 'verified' | 'rejected' | 'expired';
+export type CompanyType = 'LLC' | 'Sole_Proprietorship' | 'Branch' | 'Free_Zone' | 'Partnership' | 'Other';
+export type IssuingAuthority = 'DED' | 'DMCC' | 'DIFC' | 'JAFZA' | 'ADGM' | 'SHAMS' | 'RAK_ICC' | 'Fujairah_Creative_City' | 'Ministry_of_Economy' | 'Other';
+export type BusinessCategory = 'Manpower_Supply' | 'MEP_Services' | 'Civil_Works' | 'Facility_Management' | 'HVAC' | 'Plumbing' | 'Electrical' | 'Building_Maintenance' | 'Technical_Services' | 'Engineering_Consultancy' | 'IT_Services' | 'Security_Services' | 'Cleaning_Services' | 'Landscaping' | 'Transportation' | 'Other';
+export type Emirates = 'Dubai' | 'Abu_Dhabi' | 'Sharjah' | 'Ajman' | 'Umm_Al_Quwain' | 'Ras_Al_Khaimah' | 'Fujairah';
+
+export interface VendorProfile {
+  id: string;
+  user_id: string;
+  
+  // 1. Company Information
+  company_name_english: string;
+  company_name_arabic?: string;
+  trade_license_number: string;
+  issuing_authority: IssuingAuthority;
+  license_activity?: string;
+  license_expiry_date: string;
+  establishment_date?: string;
+  company_type: CompanyType;
+  tax_registration_number?: string;
+  
+  // 2. Business Location
+  registered_office_address: string;
+  emirate: Emirates;
+  branch_locations?: string[];
+  google_maps_url?: string;
+  makani_number?: string;
+  
+  // 3. Authorized Contact Details
+  authorized_person_name: string;
+  designation?: string;
+  business_email: string;
+  business_phone: string;
+  whatsapp_number?: string;
+  company_website?: string;
+  linkedin_url?: string;
+  social_media_links?: string[];
+  
+  // 4. Ownership / Management Info
+  company_owner_names?: string[];
+  owner_nationalities?: string[];
+  manager_name?: string;
+  authorized_signatory_name?: string;
+  
+  // 5. Business Operations & Capabilities
+  business_category: BusinessCategory;
+  main_services_offered: string[];
+  trade_license_activity_codes?: string[];
+  years_experience_uae?: number;
+  major_clients?: string[];
+  staff_strength?: number;
+  certifications?: string[];
+  insurance_details?: string;
+  health_safety_compliance: boolean;
+  labour_supply_approval_number?: string;
+  
+  // 6. Banking / Payment Info
+  bank_name?: string;
+  iban?: string;
+  account_name?: string;
+  
+  // 7. Verification & Compliance
+  verification_status: VendorVerificationStatus;
+  verification_date?: string;
+  verification_notes?: string;
+  verified_by?: string;
+  
+  // 8. Optional Metadata
+  free_zone_mainland_indicator?: string;
+  chamber_of_commerce_number?: string;
+  mohre_workers_count?: number;
+  preferred_work_locations?: Emirates[];
+  languages_spoken?: string[];
+  response_sla_hours: number;
+  availability_hours?: string;
+  
+  // Compliance checkboxes
+  uae_labour_law_compliance: boolean;
+  mohre_requirements_compliance: boolean;
+  vat_compliance: boolean;
+  
+  // Profile completion tracking
+  profile_completion_percentage: number;
+  is_profile_complete: boolean;
+  
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  user?: User;
+  documents?: VendorDocument[];
+  services?: VendorService[];
+  vendor_certifications?: VendorCertification[];
+  references?: VendorReference[];
+}
+
+export interface VendorDocument {
+  id: string;
+  vendor_profile_id: string;
+  document_type: string;
+  document_name: string;
+  file_url: string;
+  file_size?: number;
+  mime_type?: string;
+  is_verified: boolean;
+  verification_notes?: string;
+  uploaded_at: string;
+}
+
+export interface VendorService {
+  id: string;
+  vendor_profile_id: string;
+  service_name: string;
+  service_description?: string;
+  years_experience: number;
+  hourly_rate?: number;
+  daily_rate?: number;
+  is_primary_service: boolean;
+  created_at: string;
+}
+
+export interface VendorCertification {
+  id: string;
+  vendor_profile_id: string;
+  certification_name: string;
+  issuing_body?: string;
+  certificate_number?: string;
+  issue_date?: string;
+  expiry_date?: string;
+  certificate_url?: string;
+  is_verified: boolean;
+  created_at: string;
+}
+
+export interface VendorReference {
+  id: string;
+  vendor_profile_id: string;
+  client_name: string;
+  client_contact_person?: string;
+  client_email?: string;
+  client_phone?: string;
+  project_description?: string;
+  project_value?: number;
+  project_duration_months?: number;
+  completion_date?: string;
+  is_verified: boolean;
+  created_at: string;
+}
+
+// Form data interfaces for multi-step onboarding
+export interface VendorOnboardingStep1 {
+  company_name_english: string;
+  company_name_arabic?: string;
+  trade_license_number: string;
+  issuing_authority: IssuingAuthority;
+  license_activity?: string;
+  license_expiry_date: string;
+  establishment_date?: string;
+  company_type: CompanyType;
+  tax_registration_number?: string;
+}
+
+export interface VendorOnboardingStep2 {
+  registered_office_address: string;
+  emirate: Emirates;
+  branch_locations?: string[];
+  google_maps_url?: string;
+  makani_number?: string;
+}
+
+export interface VendorOnboardingStep3 {
+  authorized_person_name: string;
+  designation?: string;
+  business_email: string;
+  business_phone: string;
+  whatsapp_number?: string;
+  company_website?: string;
+  linkedin_url?: string;
+  social_media_links?: string[];
+}
+
+export interface VendorOnboardingStep4 {
+  company_owner_names?: string[];
+  owner_nationalities?: string[];
+  manager_name?: string;
+  authorized_signatory_name?: string;
+}
+
+export interface VendorOnboardingStep5 {
+  business_category: BusinessCategory;
+  main_services_offered: string[];
+  trade_license_activity_codes?: string[];
+  years_experience_uae?: number;
+  major_clients?: string[];
+  staff_strength?: number;
+  certifications?: string[];
+  insurance_details?: string;
+  health_safety_compliance: boolean;
+  labour_supply_approval_number?: string;
+}
+
+export interface VendorOnboardingStep6 {
+  bank_name?: string;
+  iban?: string;
+  account_name?: string;
+}
+
+export interface VendorOnboardingStep7 {
+  documents: File[];
+  document_types: string[];
+}
+
+export interface VendorOnboardingStep8 {
+  free_zone_mainland_indicator?: string;
+  chamber_of_commerce_number?: string;
+  mohre_workers_count?: number;
+  preferred_work_locations?: Emirates[];
+  languages_spoken?: string[];
+  response_sla_hours: number;
+  availability_hours?: string;
+  uae_labour_law_compliance: boolean;
+  mohre_requirements_compliance: boolean;
+  vat_compliance: boolean;
+}
+
+export interface VendorOnboardingData {
+  step1: VendorOnboardingStep1;
+  step2: VendorOnboardingStep2;
+  step3: VendorOnboardingStep3;
+  step4: VendorOnboardingStep4;
+  step5: VendorOnboardingStep5;
+  step6: VendorOnboardingStep6;
+  step7: VendorOnboardingStep7;
+  step8: VendorOnboardingStep8;
+}
+
 export interface Payment {
   id: string;
   rfq_id: string;
