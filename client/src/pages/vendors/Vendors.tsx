@@ -170,14 +170,14 @@ const Vendors: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                   <span className="text-blue-600 font-semibold text-lg">
-                    {vendor.first_name[0]}{vendor.last_name[0]}
+                    {vendor.first_name?.[0] || vendor.company_name?.[0] || 'V'}{vendor.last_name?.[0] || ''}
                   </span>
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-lg font-semibold text-gray-900">
-                    {vendor.first_name} {vendor.last_name}
+                    {`${vendor.first_name || ''} ${vendor.last_name || ''}`.trim() || vendor.company_name || 'Vendor'}
                   </CardTitle>
-                  {vendor.company_name && (
+                  {vendor.company_name && vendor.first_name && (
                     <p className="text-sm text-gray-600">{vendor.company_name}</p>
                   )}
                 </div>

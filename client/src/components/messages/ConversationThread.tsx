@@ -26,6 +26,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({
   onClose
 }) => {
   const { user } = useAuth();
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -170,7 +171,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({
         .from('messages')
         .insert({
           rfq_id: rfqId,
-          quote_id: quoteId,
+          quote_id: quoteId || null, // Convert empty string to null
           sender_id: user.id,
           receiver_id: otherUserId,
           content: newMessage.trim(),
