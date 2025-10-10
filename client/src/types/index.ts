@@ -1,9 +1,9 @@
 export interface User {
   id: string;
   email: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
   user_type: 'buyer' | 'vendor' | 'admin';
   avatar_url?: string | null;
   bio?: string | null;
@@ -88,6 +88,19 @@ export interface RFQ {
   quotes?: Quote[];
 }
 
+export interface QuoteItem {
+  id: string;
+  quote_id: string;
+  rfq_item_index: number; // References the item position in rfq.items array
+  item_name: string;
+  quantity_quoted: number;
+  unit_price: number;
+  total_price: number;
+  delivery_time?: string;
+  notes?: string;
+  created_at: string;
+}
+
 export interface Quote {
   id: string;
   rfq_id: string;
@@ -100,6 +113,10 @@ export interface Quote {
   terms_conditions?: string;
   status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'withdrawn';
   attachments?: string[] | null;
+  // Item-level quoting fields
+  is_partial_quote: boolean;
+  quoted_items_count: number;
+  quote_items?: QuoteItem[];
   created_at: string;
   updated_at: string;
   vendor?: User;
@@ -506,6 +523,16 @@ export interface RFQFormData {
   service_type?: string;
 }
 
+export interface QuoteItemFormData {
+  rfq_item_index: number;
+  item_name: string;
+  quantity_quoted: number;
+  unit_price: number;
+  total_price: number;
+  delivery_time?: string;
+  notes?: string;
+}
+
 export interface QuoteFormData {
   message: string;
   price: number;
@@ -514,6 +541,9 @@ export interface QuoteFormData {
   delivery_time: string;
   terms_conditions?: string;
   attachments?: File[];
+  // Item-level quoting
+  is_partial_quote: boolean;
+  quote_items: QuoteItemFormData[];
 }
 
 export interface ReviewFormData {

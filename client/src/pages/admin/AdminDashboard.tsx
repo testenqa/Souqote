@@ -403,13 +403,15 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center space-x-4">
                       <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                         <span className="text-gray-600 font-semibold">
-                          {user.first_name[0]}{user.last_name[0]}
+                          {user.first_name?.[0] || user.company_name?.[0] || 'U'}{user.last_name?.[0] || ''}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium">{user.first_name} {user.last_name}</p>
+                        <p className="font-medium">
+                          {`${user.first_name || ''} ${user.last_name || ''}`.trim() || user.company_name || 'User'}
+                        </p>
                         <p className="text-sm text-gray-500">{user.email}</p>
-                        {user.company_name && (
+                        {user.company_name && user.first_name && (
                           <p className="text-sm text-gray-500">{user.company_name}</p>
                         )}
                       </div>

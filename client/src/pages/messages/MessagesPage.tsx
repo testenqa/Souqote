@@ -6,6 +6,7 @@ import { ConversationThread as ConversationThreadType } from '../../types';
 import { Card, CardContent } from '../../components/ui/card';
 import ConversationThread from '../../components/messages/ConversationThread';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { getUserDisplayName, getUserInitials } from '../../lib/utils';
 import { MessageCircle, User } from 'lucide-react';
 
 const MessagesPage: React.FC = () => {
@@ -31,7 +32,27 @@ const MessagesPage: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return messages;
+      
+      // Fetch missing user data for any null receivers or senders
+      const userIds = new Set<string>();
+      messages?.forEach(message => {
+        if (message.sender_id) userIds.add(message.sender_id);
+        if (message.receiver_id) userIds.add(message.receiver_id);
+      });
+      
+      const { data: allUsers } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, avatar_url, company_name')
+        .in('id', Array.from(userIds));
+      
+      // Replace null user references with actual user data
+      const messagesWithUsers = messages?.map(message => ({
+        ...message,
+        sender: message.sender || allUsers?.find(u => u.id === message.sender_id) || null,
+        receiver: message.receiver || allUsers?.find(u => u.id === message.receiver_id) || null,
+      }));
+      
+      return messagesWithUsers;
     },
     { enabled: !!user }
   );
@@ -45,7 +66,19 @@ const MessagesPage: React.FC = () => {
     messagesData.forEach((message) => {
       const threadId = message.thread_id || '';
       const otherUserId = message.sender_id === user.id ? message.receiver_id : message.sender_id;
-      const otherUser = message.sender_id === user.id ? message.receiver : message.sender;
+      let otherUser = message.sender_id === user.id ? message.receiver : message.sender;
+      
+      // Fallback: If otherUser is null, create a minimal user object
+      if (!otherUser && otherUserId) {
+        otherUser = {
+          id: otherUserId,
+          first_name: null,
+          last_name: null,
+          company_name: null,
+          avatar_url: null
+        };
+      }
+      
 
       if (!threadMap.has(threadId)) {
         const unreadCount = messagesData.filter(
@@ -178,13 +211,14 @@ const MessagesPage: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <h3 className="text-sm font-semibold text-gray-900 truncate">
-                              {conversation.other_user?.first_name} {conversation.other_user?.last_name}
+                              {getUserDisplayName(conversation.other_user, 'User')}
                             </h3>
                             <span className="text-xs text-gray-500">
                               {formatTime(conversation.last_message_at)}
                             </span>
                           </div>
-                          {conversation.other_user?.company_name && (
+                          {conversation.other_user?.company_name && 
+                           conversation.other_user?.first_name && (
                             <p className="text-xs text-gray-500 mb-1">
                               {conversation.other_user.company_name}
                             </p>
@@ -222,7 +256,7 @@ const MessagesPage: React.FC = () => {
                   ? selectedConversation.receiver_id
                   : selectedConversation.sender_id
               }
-              otherUserName={`${selectedConversation.other_user?.first_name} ${selectedConversation.other_user?.last_name}`}
+              otherUserName={getUserDisplayName(selectedConversation.other_user, 'User')}
               quoteId={selectedConversation.quote_id}
             />
           ) : (

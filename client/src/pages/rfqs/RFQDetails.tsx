@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/SimpleAuthContext';
-import { RFQ, Quote, QuoteFormData } from '../../types';
+import { RFQ, Quote, QuoteFormData, QuoteItemFormData } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import FileUpload from '../../components/ui/file-upload';
+import ItemLevelQuoteForm from '../../components/ItemLevelQuoteForm';
+import QuoteItemsDisplay from '../../components/QuoteItemsDisplay';
+import { getUserDisplayName } from '../../lib/utils';
 import { FileText, Image, MessageCircle } from 'lucide-react';
 import ConversationThread from '../../components/messages/ConversationThread';
 import toast from 'react-hot-toast';
@@ -35,6 +38,8 @@ const RFQDetails: React.FC = () => {
     delivery_time: '',
     terms_conditions: '',
     attachments: [],
+    is_partial_quote: false,
+    quote_items: [],
   });
 
   const { data: rfq, isLoading: rfqLoading } = useQuery(
@@ -76,7 +81,8 @@ const RFQDetails: React.FC = () => {
             company_name,
             rating,
             total_quotes
-          )
+          ),
+          quote_items (*)
         `)
         .eq('rfq_id', id)
         .order('created_at', { ascending: false });
@@ -112,7 +118,13 @@ const RFQDetails: React.FC = () => {
         attachmentUrls = await Promise.all(uploadPromises);
       }
 
-      const { data, error } = await supabase
+      // Determine if this is a partial quote
+      const totalItemsInRfq = rfq.items?.length || 0;
+      const quotedItemsCount = quoteData.quote_items?.length || 0;
+      const isPartialQuote = totalItemsInRfq > 0 && quotedItemsCount > 0 && quotedItemsCount < totalItemsInRfq;
+
+      // Insert the main quote
+      const { data: quoteData_db, error } = await supabase
         .from('quotes')
         .insert({
           rfq_id: rfq.id,
@@ -124,12 +136,35 @@ const RFQDetails: React.FC = () => {
           message: quoteData.message,
           terms_conditions: quoteData.terms_conditions,
           attachments: attachmentUrls.length > 0 ? attachmentUrls : null,
+          is_partial_quote: isPartialQuote,
+          quoted_items_count: quotedItemsCount,
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+
+      // If item-level quoting, insert quote_items
+      if (quoteData.quote_items && quoteData.quote_items.length > 0) {
+        const quoteItemsToInsert = quoteData.quote_items.map(item => ({
+          quote_id: quoteData_db.id,
+          rfq_item_index: item.rfq_item_index,
+          item_name: item.item_name,
+          quantity_quoted: item.quantity_quoted,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          delivery_time: item.delivery_time,
+          notes: item.notes,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('quote_items')
+          .insert(quoteItemsToInsert);
+
+        if (itemsError) throw itemsError;
+      }
+
+      return quoteData_db;
     },
     {
       onSuccess: () => {
@@ -143,6 +178,8 @@ const RFQDetails: React.FC = () => {
           delivery_time: '',
           terms_conditions: '',
           attachments: [],
+          is_partial_quote: false,
+          quote_items: [],
         });
         queryClient.invalidateQueries(['quotes', id]);
       },
@@ -247,6 +284,16 @@ const RFQDetails: React.FC = () => {
     });
   };
 
+  // Memoized callback for handling quote items changes
+  const handleQuoteItemsChange = useCallback((quoteItems: QuoteItemFormData[], totalPrice: number) => {
+    setQuoteForm(prev => ({
+      ...prev,
+      quote_items: quoteItems,
+      price: totalPrice,
+      is_partial_quote: quoteItems.length < (rfq?.items?.length || 0),
+    }));
+  }, [rfq?.items?.length]);
+
   // Check if vendor has already submitted a quote (excluding withdrawn quotes)
   const vendorQuote = quotes?.find(q => q.vendor_id === user?.id && q.status !== 'withdrawn');
   const canSubmitQuote = user?.user_type === 'vendor' && rfq?.status === 'open' && !vendorQuote;
@@ -265,7 +312,7 @@ const RFQDetails: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{rfq.title}</h1>
             <div className="flex items-center space-x-4 text-gray-600">
-              <span>By {rfq.buyer?.first_name} {rfq.buyer?.last_name}</span>
+              <span>By {getUserDisplayName(rfq.buyer, 'Buyer')}</span>
               {rfq.buyer?.company_name && (
                 <span>• {rfq.buyer.company_name}</span>
               )}
@@ -615,6 +662,24 @@ const RFQDetails: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Item-Level Breakdown */}
+                  {vendorQuote.quote_items && vendorQuote.quote_items.length > 0 && (
+                    <div className="mb-3 pb-3 border-b">
+                      <QuoteItemsDisplay
+                        quoteItems={vendorQuote.quote_items}
+                        currency={vendorQuote.currency}
+                        showTitle={true}
+                      />
+                      {vendorQuote.is_partial_quote && (
+                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded">
+                          <p className="text-sm text-amber-800">
+                            ⚠️ <span className="font-medium">Partial Quote:</span> You quoted on {vendorQuote.quoted_items_count} out of {rfq.items?.length || 0} items in this RFQ.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {vendorQuote.attachments && vendorQuote.attachments.length > 0 && (
                     <div className="mb-3 pb-3 border-b">
                       <h5 className="text-sm font-medium text-gray-700 mb-2">Attachments:</h5>
@@ -764,6 +829,22 @@ const RFQDetails: React.FC = () => {
                     />
                   </div>
 
+                  {/* Item-Level Quoting (shown when RFQ has items) */}
+                  {rfq.items && rfq.items.length > 0 && (
+                    <div className="pt-4 border-t">
+                      <h4 className="text-base font-semibold text-gray-900 mb-3">Item Selection & Pricing</h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Select the items you want to quote on and provide individual pricing for each item.
+                        You can quote on all items or only the items you can supply.
+                      </p>
+                      <ItemLevelQuoteForm
+                        rfqItems={rfq.items}
+                        onQuoteItemsChange={handleQuoteItemsChange}
+                        currency={rfq.currency || 'AED'}
+                      />
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Attachments (Optional)
@@ -821,7 +902,7 @@ const RFQDetails: React.FC = () => {
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <h4 className="font-semibold text-gray-900">
-                            {quote.vendor?.first_name} {quote.vendor?.last_name}
+                            {getUserDisplayName(quote.vendor, 'Vendor')}
                           </h4>
                           {quote.vendor?.company_name && (
                             <p className="text-sm text-gray-600">{quote.vendor.company_name}</p>
@@ -848,6 +929,24 @@ const RFQDetails: React.FC = () => {
                       
                       <p className="text-gray-700 mb-3">{quote.message}</p>
                       
+                      {/* Item-Level Breakdown for Buyer */}
+                      {quote.quote_items && quote.quote_items.length > 0 && (
+                        <div className="mb-3 pb-3 border-b">
+                          <QuoteItemsDisplay
+                            quoteItems={quote.quote_items}
+                            currency={quote.currency}
+                            showTitle={true}
+                          />
+                          {quote.is_partial_quote && (
+                            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded">
+                              <p className="text-sm text-amber-800">
+                                ℹ️ <span className="font-medium">Partial Quote:</span> Vendor quoted on {quote.quoted_items_count} out of {rfq.items?.length || 0} items.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {quote.attachments && quote.attachments.length > 0 && (
                         <div className="mb-3 pb-3 border-b">
                           <h5 className="text-sm font-medium text-gray-700 mb-2">Attachments:</h5>
@@ -958,7 +1057,7 @@ const RFQDetails: React.FC = () => {
               <CardContent>
                 <div className="space-y-2">
                   <p className="font-medium">
-                    {rfq.buyer.first_name} {rfq.buyer.last_name}
+                    {getUserDisplayName(rfq.buyer, 'Buyer')}
                   </p>
                   {rfq.buyer.company_name && (
                     <p className="text-gray-600">{rfq.buyer.company_name}</p>
@@ -1003,8 +1102,8 @@ const RFQDetails: React.FC = () => {
               otherUserId={selectedQuote ? selectedQuote.vendor_id : rfq.buyer_id}
               otherUserName={
                 selectedQuote 
-                  ? `${selectedQuote.vendor?.first_name} ${selectedQuote.vendor?.last_name}`
-                  : `${rfq.buyer?.first_name} ${rfq.buyer?.last_name}`
+                  ? getUserDisplayName(selectedQuote.vendor, 'Vendor')
+                  : getUserDisplayName(rfq.buyer, 'Buyer')
               }
               quoteId={selectedQuote?.id}
               quoteStatus={selectedQuote?.status}

@@ -49,7 +49,7 @@ export class AuthService {
     // Generate JWT token
     const payload = { userId: user.id, email: user.email };
     const secret = process.env.JWT_SECRET || 'fallback-secret-key';
-    const options: SignOptions = { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string };
+    const options: SignOptions = { expiresIn: process.env.JWT_EXPIRES_IN || '7d' };
     const token = jwt.sign(payload, secret, options);
 
     return { user, token };
@@ -80,7 +80,7 @@ export class AuthService {
     // Generate JWT token
     const payload = { userId: user.id, email: user.email };
     const secret = process.env.JWT_SECRET || 'fallback-secret-key';
-    const options: SignOptions = { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string };
+    const options: SignOptions = { expiresIn: process.env.JWT_EXPIRES_IN || '7d' };
     const token = jwt.sign(payload, secret, options);
 
     // Remove password hash from response
