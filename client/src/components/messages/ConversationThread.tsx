@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/SimpleAuthContext';
-import { Message, MessageFormData } from '../../types';
+import { Message } from '../../types';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import FileUpload from '../ui/file-upload';
@@ -150,7 +150,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({
           const fileExt = file.name.split('.').pop();
           const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
           
-          const { data: uploadData, error: uploadError } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('message-attachments')
             .upload(fileName, file);
 

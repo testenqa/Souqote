@@ -4,21 +4,28 @@ import { useQuery } from 'react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/SimpleAuthContext';
 import { RFQ } from '../../types';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ConversationThread from '../../components/messages/ConversationThread';
 
 const MyRFQs: React.FC = () => {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedConversation, setSelectedConversation] = useState<{
+    rfqId: string;
+    vendorId: string;
+    vendorName: string;
+  } | null>(null);
 
-  const { data: rfqs, isLoading, error } = useQuery(
-    ['my-rfqs', user?.id, statusFilter],
+  // Fetch all RFQs for counting
+  const { data: allRfqs, isLoading, error } = useQuery(
+    ['my-rfqs-all', user?.id],
     async () => {
       if (!user) return [];
       
-      let query = supabase
+      const { data, error } = await supabase
         .from('rfqs')
         .select(`
           *,
@@ -31,16 +38,22 @@ const MyRFQs: React.FC = () => {
         .eq('buyer_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data as RFQ[];
     },
     { enabled: !!user }
   );
+
+  // Filter the RFQs based on selected status
+  const rfqs = React.useMemo(() => {
+    if (!allRfqs) return [];
+    
+    if (statusFilter === 'all') {
+      return allRfqs;
+    }
+    
+    return allRfqs.filter(rfq => rfq.status === statusFilter);
+  }, [allRfqs, statusFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -86,6 +99,39 @@ const MyRFQs: React.FC = () => {
     return rfq.quotes?.filter(quote => quote.status === 'accepted').length || 0;
   };
 
+  const handleOpenMessages = async (rfq: RFQ) => {
+    // Get the first vendor who has quoted on this RFQ
+    const firstQuote = rfq.quotes?.[0];
+    if (firstQuote?.vendor_id) {
+      try {
+        // Fetch vendor information
+        const { data: vendor, error } = await supabase
+          .from('users')
+          .select('id, first_name, last_name, company_name')
+          .eq('id', firstQuote.vendor_id)
+          .single();
+        
+        if (vendor && !error) {
+          const vendorName = `${vendor.first_name || ''} ${vendor.last_name || ''}`.trim() || vendor.company_name || 'Vendor';
+          
+          setSelectedConversation({
+            rfqId: rfq.id,
+            vendorId: firstQuote.vendor_id,
+            vendorName: vendorName
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching vendor info:', error);
+        // Fallback with just the vendor ID
+        setSelectedConversation({
+          rfqId: rfq.id,
+          vendorId: firstQuote.vendor_id,
+          vendorName: 'Vendor'
+        });
+      }
+    }
+  };
+
   if (isLoading) return <LoadingSpinner />;
   if (error) return <div className="text-red-500">Error loading your RFQs</div>;
 
@@ -114,7 +160,7 @@ const MyRFQs: React.FC = () => {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            All ({rfqs?.length || 0})
+            All ({allRfqs?.length || 0})
           </button>
           <button
             onClick={() => setStatusFilter('open')}
@@ -124,7 +170,7 @@ const MyRFQs: React.FC = () => {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Open ({rfqs?.filter(rfq => rfq.status === 'open').length || 0})
+            Open ({allRfqs?.filter(rfq => rfq.status === 'open').length || 0})
           </button>
           <button
             onClick={() => setStatusFilter('in_progress')}
@@ -134,7 +180,7 @@ const MyRFQs: React.FC = () => {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            In Progress ({rfqs?.filter(rfq => rfq.status === 'in_progress').length || 0})
+            In Progress ({allRfqs?.filter(rfq => rfq.status === 'in_progress').length || 0})
           </button>
           <button
             onClick={() => setStatusFilter('awarded')}
@@ -144,7 +190,7 @@ const MyRFQs: React.FC = () => {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Awarded ({rfqs?.filter(rfq => rfq.status === 'awarded').length || 0})
+            Awarded ({allRfqs?.filter(rfq => rfq.status === 'awarded').length || 0})
           </button>
         </div>
       </div>
@@ -219,7 +265,12 @@ const MyRFQs: React.FC = () => {
                       Edit
                     </Button>
                   )}
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleOpenMessages(rfq)}
+                    disabled={!rfq.quotes || rfq.quotes.length === 0}
+                  >
                     Messages
                   </Button>
                 </div>
@@ -240,6 +291,33 @@ const MyRFQs: React.FC = () => {
           <Link to="/post-rfq">
             <Button>Post Your First RFQ</Button>
           </Link>
+        </div>
+      )}
+
+      {/* Messages Modal */}
+      {selectedConversation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">
+                Messages with {selectedConversation.vendorName}
+              </h3>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSelectedConversation(null)}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ConversationThread
+                otherUserId={selectedConversation.vendorId}
+                otherUserName={selectedConversation.vendorName}
+                rfqId={selectedConversation.rfqId}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

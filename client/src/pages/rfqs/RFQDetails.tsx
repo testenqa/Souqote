@@ -194,26 +194,31 @@ const RFQDetails: React.FC = () => {
       if (!rfq) throw new Error('RFQ not found');
       
       // Update quote status to accepted
-      const { error: quoteError } = await supabase
+      const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
         .update({ status: 'accepted' })
-        .eq('id', quoteId);
+        .eq('id', quoteId)
+        .select();
 
       if (quoteError) throw quoteError;
 
       // Update RFQ status to awarded
-      const { error: rfqError } = await supabase
+      const { data: rfqData, error: rfqError } = await supabase
         .from('rfqs')
         .update({ status: 'awarded' })
-        .eq('id', rfq.id);
+        .eq('id', rfq.id)
+        .select();
 
       if (rfqError) throw rfqError;
+
+      return { quoteData, rfqData };
     },
     {
-      onSuccess: () => {
+      onSuccess: async (data) => {
         toast.success('Quote accepted successfully!');
-        queryClient.invalidateQueries(['rfq', id]);
-        queryClient.invalidateQueries(['quotes', id]);
+        // Refetch both queries to ensure fresh data
+        await queryClient.refetchQueries(['rfq', id]);
+        await queryClient.refetchQueries(['quotes', id]);
       },
       onError: (error: any) => {
         toast.error(error.message || 'Failed to accept quote');
@@ -1005,8 +1010,17 @@ const RFQDetails: React.FC = () => {
                                 <span>Message Vendor</span>
                               </Button>
                               {quote.status === 'pending' && (
-                                <Button size="sm">
-                                  Accept Quote
+                                <Button 
+                                  size="sm"
+                                  onClick={() => {
+                                    if (window.confirm('Are you sure you want to accept this quote? This will award the RFQ to this vendor and close the RFQ to other quotes.')) {
+                                      acceptQuoteMutation.mutate(quote.id);
+                                    }
+                                  }}
+                                  disabled={acceptQuoteMutation.isLoading}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  {acceptQuoteMutation.isLoading ? 'Accepting...' : 'Accept Quote'}
                                 </Button>
                               )}
                             </>
