@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import FileUpload from '../ui/file-upload';
 import { Send, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { NotificationService } from '../../services/notificationService';
 import toast from 'react-hot-toast';
 
 interface ConversationThreadProps {
@@ -181,6 +182,20 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({
         });
 
       if (error) throw error;
+
+      // Send notification to the receiver about the new message
+      await NotificationService.createNotification(
+        otherUserId,
+        'new_message',
+        {
+          message_id: 'temp', // We don't have the message ID yet, but notification will work
+          sender_id: user.id,
+          sender_name: `${user.first_name} ${user.last_name}`.trim() || user.company_name || 'User',
+          rfq_id: rfqId,
+          content: newMessage.trim(),
+          has_attachments: attachmentUrls.length > 0
+        }
+      );
 
       setNewMessage('');
       setAttachments([]);

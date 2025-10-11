@@ -26,6 +26,7 @@ import VendorProfile from './pages/vendors/VendorProfile';
 import MyQuotes from './pages/vendors/MyQuotes';
 import VendorOnboarding from './pages/vendors/VendorOnboarding';
 import MessagesPage from './pages/messages/MessagesPage';
+import NotificationsPage from './pages/notifications/NotificationsPage';
 import Profile from './pages/profile/Profile';
 import EditProfile from './pages/profile/EditProfile';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -163,6 +164,14 @@ const AppContent: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <MessagesPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/notifications" 
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
                 </ProtectedRoute>
               } 
             />
