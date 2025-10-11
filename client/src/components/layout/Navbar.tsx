@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/SimpleAuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
+import NotificationBell from '../notifications/NotificationBell';
 import { Menu, X, User, LogOut, MessageSquare, Briefcase } from 'lucide-react';
 
 const Navbar: React.FC = () => {
@@ -105,18 +106,6 @@ const Navbar: React.FC = () => {
             
             {isAuthenticated && (
               <>
-                <Link
-                  to="/messages"
-                  className="text-gray-700 hover:text-yellow-600 transition-colors duration-200 flex items-center space-x-1 relative"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{t('messages')}</span>
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </Link>
                 {permissions.canViewMyRFQs && (
                   <Link
                     to="/my-rfqs"
@@ -133,6 +122,18 @@ const Navbar: React.FC = () => {
                     My Bids
                   </Link>
                 )}
+                <Link
+                  to="/messages"
+                  className="text-gray-700 hover:text-yellow-600 transition-colors duration-200 flex items-center space-x-1 relative"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>{t('messages')}</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
               </>
             )}
           </div>
@@ -148,39 +149,42 @@ const Navbar: React.FC = () => {
             </button>
 
             {isAuthenticated ? (
-              <div className="relative">
-                <button
-                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-yellow-600 transition-colors duration-200"
-                >
-                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <span className="text-sm font-medium">
-                    {user?.first_name} {user?.last_name}
-                  </span>
-                </button>
+              <div className="flex items-center space-x-4">
+                <NotificationBell />
+                <div className="relative">
+                  <button
+                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                    className="flex items-center space-x-2 text-gray-700 hover:text-yellow-600 transition-colors duration-200"
+                  >
+                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-medium">
+                      {user?.first_name} {user?.last_name}
+                    </span>
+                  </button>
 
-                {/* Profile Dropdown */}
-                {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                    <Link
-                      to="/profile"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                    >
-                      <User className="w-4 h-4 mr-2" />
-                      {t('profile')}
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      {t('logout')}
-                    </button>
-                  </div>
-                )}
+                  {/* Profile Dropdown */}
+                  {isProfileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                      <Link
+                        to="/profile"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        {t('profile')}
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        {t('logout')}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex items-center space-x-2">

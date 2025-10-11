@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import FileUpload from '../../components/ui/file-upload';
 import RFQItems from '../../components/ui/rfq-items';
+import { NotificationService } from '../../services/notificationService';
 import toast from 'react-hot-toast';
 
 const PostRFQ: React.FC = () => {
@@ -49,6 +50,8 @@ const PostRFQ: React.FC = () => {
   });
   const [attachments, setAttachments] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [otherCategory, setOtherCategory] = useState<string>('');
 
   const { data: categories, isLoading: categoriesLoading } = useQuery(
     'categories',
@@ -141,8 +144,48 @@ const PostRFQ: React.FC = () => {
       }
     },
     {
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
         toast.success('RFQ posted successfully!');
+        
+        // Send notifications to relevant vendors about the new RFQ
+        try {
+          // Get vendors who might be interested in this RFQ category
+          const { data: vendors, error: vendorError } = await supabase
+            .from('users')
+            .select('id, first_name, last_name, company_name, specialties')
+            .eq('user_type', 'vendor')
+            .eq('is_verified', true);
+
+          if (!vendorError && vendors) {
+            // Filter vendors based on category/specialty match (simplified logic)
+            const relevantVendors = vendors.filter(vendor => {
+              // For now, notify all verified vendors
+              // In a real implementation, you'd match by category/specialties
+              return true;
+            });
+
+            // Send notifications to relevant vendors
+            const notificationPromises = relevantVendors.slice(0, 10).map(vendor => // Limit to 10 vendors to avoid spam
+              NotificationService.createNotification(
+                vendor.id,
+                'new_rfq_available',
+                {
+                  rfq_id: data.id,
+                  rfq_title: data.title,
+                  rfq_category: data.category,
+                  buyer_id: user?.id,
+                  deadline: data.deadline
+                }
+              )
+            );
+
+            await Promise.all(notificationPromises);
+          }
+        } catch (error) {
+          console.error('Error sending RFQ notifications:', error);
+          // Don't fail the RFQ creation if notifications fail
+        }
+        
         navigate(`/rfqs/${data.id}`);
       },
       onError: (error: any) => {
@@ -177,7 +220,42 @@ const PostRFQ: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    postRFQMutation.mutate(formData);
+    
+    // Validate required fields
+    const newErrors: Record<string, boolean> = {};
+    if (!formData.title) newErrors.title = true;
+    if (!formData.category_id) newErrors.category_id = true;
+    if (!formData.location) newErrors.location = true;
+    if (!formData.description) newErrors.description = true;
+    if (!formData.deadline) newErrors.deadline = true;
+    if (!formData.delivery_date) newErrors.delivery_date = true;
+    
+    // If "Other" category is selected, validate otherCategory field
+    if (formData.category_id === 'Other' && !otherCategory.trim()) {
+      newErrors.otherCategory = true;
+    }
+    
+    setErrors(newErrors);
+    
+    // If there are errors, show toast and don't submit
+    if (Object.keys(newErrors).length > 0) {
+      toast.error('Please fill in all required fields');
+      // Scroll to first error
+      const firstErrorField = Object.keys(newErrors)[0];
+      const element = document.querySelector(`[name="${firstErrorField}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+    
+    // If "Other" category, use the custom category name
+    const finalFormData = {
+      ...formData,
+      category_id: formData.category_id === 'Other' ? `Other: ${otherCategory}` : formData.category_id
+    };
+    
+    postRFQMutation.mutate(finalFormData);
   };
 
   if (categoriesLoading) return <LoadingSpinner />;
@@ -200,27 +278,45 @@ const PostRFQ: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    RFQ Title *
+                    RFQ Title <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    name="title"
                     required
                     value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      handleInputChange('title', e.target.value);
+                      if (errors.title) setErrors(prev => ({ ...prev, title: false }));
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="e.g., Steel Reinforcement Bars for Construction Project"
                   />
+                  {errors.title && <p className="text-red-500 text-sm mt-1">This field is required</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category *
+                    Category <span className="text-red-500">*</span>
                   </label>
                   <select
+                    name="category_id"
                     required
                     value={formData.category_id}
-                    onChange={(e) => handleInputChange('category_id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      handleInputChange('category_id', e.target.value);
+                      if (errors.category_id) setErrors(prev => ({ ...prev, category_id: false }));
+                      // Clear "Other Category" field if user changes away from "Other"
+                      if (e.target.value !== 'Other') {
+                        setOtherCategory('');
+                        setErrors(prev => ({ ...prev, otherCategory: false }));
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.category_id ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                   >
                     <option value="">Select Category</option>
                     {categories?.map((category) => (
@@ -229,25 +325,57 @@ const PostRFQ: React.FC = () => {
                       </option>
                     ))}
                   </select>
+                  {errors.category_id && <p className="text-red-500 text-sm mt-1">This field is required</p>}
                 </div>
+
+                {/* Conditional "Other Category" Input Field */}
+                {formData.category_id === 'Other' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Specify Other Category <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="otherCategory"
+                      required
+                      value={otherCategory}
+                      onChange={(e) => {
+                        setOtherCategory(e.target.value);
+                        if (errors.otherCategory) setErrors(prev => ({ ...prev, otherCategory: false }));
+                      }}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        errors.otherCategory ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="e.g., Custom Machinery, Specialized Equipment"
+                    />
+                    {errors.otherCategory && <p className="text-red-500 text-sm mt-1">Please specify the category</p>}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Location *
+                    Location <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    name="location"
                     required
                     value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      handleInputChange('location', e.target.value);
+                      if (errors.location) setErrors(prev => ({ ...prev, location: false }));
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.location ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="e.g., Dubai, UAE"
                   />
+                  {errors.location && <p className="text-red-500 text-sm mt-1">This field is required</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Urgency Level *
+                    Urgency Level <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
@@ -263,16 +391,23 @@ const PostRFQ: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Quote Deadline *
+                    Quote Deadline <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
+                    name="deadline"
                     required
                     value={formData.deadline}
-                    onChange={(e) => handleInputChange('deadline', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      handleInputChange('deadline', e.target.value);
+                      if (errors.deadline) setErrors(prev => ({ ...prev, deadline: false }));
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.deadline ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                     min={new Date().toISOString().split('T')[0]}
                   />
+                  {errors.deadline && <p className="text-red-500 text-sm mt-1">This field is required</p>}
                 </div>
               </div>
 
@@ -308,16 +443,23 @@ const PostRFQ: React.FC = () => {
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description *
+                  Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
+                  name="description"
                   required
                   rows={6}
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    handleInputChange('description', e.target.value);
+                    if (errors.description) setErrors(prev => ({ ...prev, description: false }));
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.description ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Provide a detailed description of what you need. Include quantity, quality requirements, delivery expectations, etc."
                 />
+                {errors.description && <p className="text-red-500 text-sm mt-1">This field is required</p>}
               </div>
 
               {/* Specifications */}
@@ -522,15 +664,23 @@ const PostRFQ: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expected Delivery Date
+                        Expected Delivery Date <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="date"
+                        name="delivery_date"
+                        required
                         value={formData.delivery_date || ''}
-                        onChange={(e) => handleInputChange('delivery_date', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => {
+                          handleInputChange('delivery_date', e.target.value);
+                          if (errors.delivery_date) setErrors(prev => ({ ...prev, delivery_date: false }));
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          errors.delivery_date ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                        }`}
                         min={new Date().toISOString().split('T')[0]}
                       />
+                      {errors.delivery_date && <p className="text-red-500 text-sm mt-1">Expected delivery date is required</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">

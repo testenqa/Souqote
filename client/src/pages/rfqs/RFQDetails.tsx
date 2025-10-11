@@ -14,6 +14,7 @@ import QuoteItemsDisplay from '../../components/QuoteItemsDisplay';
 import { getUserDisplayName } from '../../lib/utils';
 import { FileText, Image, MessageCircle } from 'lucide-react';
 import ConversationThread from '../../components/messages/ConversationThread';
+import { NotificationService } from '../../services/notificationService';
 import toast from 'react-hot-toast';
 
 const RFQDetails: React.FC = () => {
@@ -41,6 +42,7 @@ const RFQDetails: React.FC = () => {
     is_partial_quote: false,
     quote_items: [],
   });
+  const [quoteErrors, setQuoteErrors] = useState<Record<string, boolean>>({});
 
   const { data: rfq, isLoading: rfqLoading } = useQuery(
     ['rfq', id],
@@ -167,8 +169,24 @@ const RFQDetails: React.FC = () => {
       return quoteData_db;
     },
     {
-      onSuccess: () => {
+      onSuccess: async (data) => {
         toast.success('Quote submitted successfully!');
+        
+        // Send notification to the buyer about the new quote
+        if (rfq && data) {
+          await NotificationService.createNotification(
+            rfq.buyer_id,
+            'new_quote_received',
+            {
+              rfq_id: rfq.id,
+              rfq_title: rfq.title,
+              quote_id: data.id,
+              vendor_id: user?.id,
+              vendor_name: getUserDisplayName(user)
+            }
+          );
+        }
+        
         setShowQuoteForm(false);
         setQuoteForm({
           message: '',
@@ -216,6 +234,23 @@ const RFQDetails: React.FC = () => {
     {
       onSuccess: async (data) => {
         toast.success('Quote accepted successfully!');
+        
+        // Send notification to the vendor whose quote was accepted
+        if (rfq && data.quoteData && data.quoteData.length > 0) {
+          const acceptedQuote = data.quoteData[0];
+          await NotificationService.createNotification(
+            acceptedQuote.vendor_id,
+            'rfq_awarded',
+            {
+              rfq_id: rfq.id,
+              rfq_title: rfq.title,
+              quote_id: acceptedQuote.id,
+              buyer_id: user?.id,
+              buyer_name: getUserDisplayName(user)
+            }
+          );
+        }
+        
         // Refetch both queries to ensure fresh data
         await queryClient.refetchQueries(['rfq', id]);
         await queryClient.refetchQueries(['quotes', id]);
@@ -775,6 +810,21 @@ const RFQDetails: React.FC = () => {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
+                    
+                    // Validate required fields
+                    const newErrors: Record<string, boolean> = {};
+                    if (!quoteForm.price || quoteForm.price <= 0) newErrors.price = true;
+                    if (!quoteForm.delivery_time) newErrors.delivery_time = true;
+                    if (!quoteForm.message) newErrors.message = true;
+                    
+                    setQuoteErrors(newErrors);
+                    
+                    // If there are errors, show toast and don't submit
+                    if (Object.keys(newErrors).length > 0) {
+                      toast.error('Please fill in all required fields');
+                      return;
+                    }
+                    
                     submitQuoteMutation.mutate(quoteForm);
                   }}
                   className="space-y-4"
@@ -782,43 +832,61 @@ const RFQDetails: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Price (AED)
+                        Price (AED) <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"
                         required
                         value={quoteForm.price}
-                        onChange={(e) => setQuoteForm({ ...quoteForm, price: Number(e.target.value) })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => {
+                          setQuoteForm({ ...quoteForm, price: Number(e.target.value) });
+                          if (quoteErrors.price) setQuoteErrors(prev => ({ ...prev, price: false }));
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          quoteErrors.price ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                        }`}
                       />
+                      {quoteErrors.price && <p className="text-red-500 text-sm mt-1">Price is required</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Delivery Time
+                        Delivery Time <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         placeholder="e.g., 2-3 weeks"
                         value={quoteForm.delivery_time}
-                        onChange={(e) => setQuoteForm({ ...quoteForm, delivery_time: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => {
+                          setQuoteForm({ ...quoteForm, delivery_time: e.target.value });
+                          if (quoteErrors.delivery_time) setQuoteErrors(prev => ({ ...prev, delivery_time: false }));
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          quoteErrors.delivery_time ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                        }`}
                       />
+                      {quoteErrors.delivery_time && <p className="text-red-500 text-sm mt-1">Delivery time is required</p>}
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Message
+                      Message <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       required
                       rows={4}
                       value={quoteForm.message}
-                      onChange={(e) => setQuoteForm({ ...quoteForm, message: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        setQuoteForm({ ...quoteForm, message: e.target.value });
+                        if (quoteErrors.message) setQuoteErrors(prev => ({ ...prev, message: false }));
+                      }}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        quoteErrors.message ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                      }`}
                       placeholder="Describe your proposal, experience, and why you're the best choice..."
                     />
+                    {quoteErrors.message && <p className="text-red-500 text-sm mt-1">Message is required</p>}
                   </div>
 
                   <div>
