@@ -6,7 +6,7 @@ import { ConversationThread as ConversationThreadType } from '../../types';
 import { Card, CardContent } from '../../components/ui/card';
 import ConversationThread from '../../components/messages/ConversationThread';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { getUserDisplayName, getUserInitials } from '../../lib/utils';
+import { getUserDisplayName } from '../../lib/utils';
 import { MessageCircle, User } from 'lucide-react';
 
 const MessagesPage: React.FC = () => {

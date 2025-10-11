@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RFQItem, QuoteItemFormData } from '../types';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
-import { Check, X, Calculator } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 
 interface ItemLevelQuoteFormProps {
   rfqItems: RFQItem[];

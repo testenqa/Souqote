@@ -54,36 +54,67 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simple initialization - just check if there's a session
+    // Initialize auth with session data (fast, no database calls)
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setLoading(false);
+          return;
+        }
         
         if (session?.user) {
-          // Create a basic user object from session
-          const basicUser: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            first_name: session.user.user_metadata?.first_name || '',
-            last_name: session.user.user_metadata?.last_name || '',
-            phone: session.user.user_metadata?.phone || '',
-            user_type: session.user.user_metadata?.user_type || 'buyer',
-            avatar_url: session.user.user_metadata?.avatar_url || null,
-            bio: null,
-            company_name: session.user.user_metadata?.company_name || null,
-            business_license: null,
-            tax_id: null,
-            languages: null,
-            specialties: null,
-            is_verified: false,
-            rating: 0,
-            total_rfqs: 0,
-            total_quotes: 0,
-            created_at: session.user.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          
-          setUser(basicUser);
+          // Try to fetch user profile from database with timeout
+          try {
+            const profilePromise = supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            const timeoutPromise = new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error('Profile fetch timeout')), 1000)
+            );
+            
+            const { data: userProfile, error: profileError } = await Promise.race([
+              profilePromise, 
+              timeoutPromise
+            ]) as any;
+            
+            if (userProfile && !profileError) {
+              setUser(userProfile as User);
+            } else {
+              throw new Error('Profile fetch failed');
+            }
+          } catch (error) {
+            console.log('Using session metadata fallback:', error);
+            // Fallback to user metadata from session if profile fetch fails
+            const basicUser: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              first_name: session.user.user_metadata?.first_name || '',
+              last_name: session.user.user_metadata?.last_name || '',
+              phone: session.user.user_metadata?.phone || '',
+              user_type: session.user.user_metadata?.user_type || 'buyer',
+              avatar_url: session.user.user_metadata?.avatar_url || null,
+              bio: null,
+              company_name: session.user.user_metadata?.company_name || null,
+              business_license: null,
+              tax_id: null,
+              languages: null,
+              specialties: null,
+              is_verified: false,
+              rating: 0,
+              total_rfqs: 0,
+              total_quotes: 0,
+              created_at: session.user.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            
+            setUser(basicUser);
+          }
           setToken(session.access_token);
         }
       } catch (error) {
@@ -93,43 +124,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.warn('Auth initialization timeout - setting loading to false');
-      setLoading(false);
-    }, 3000);
-
-    initializeAuth().finally(() => {
-      clearTimeout(timeoutId);
-    });
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          const basicUser: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            first_name: session.user.user_metadata?.first_name || '',
-            last_name: session.user.user_metadata?.last_name || '',
-            phone: session.user.user_metadata?.phone || '',
-            user_type: session.user.user_metadata?.user_type || 'buyer',
-            avatar_url: session.user.user_metadata?.avatar_url || null,
-            bio: null,
-            company_name: session.user.user_metadata?.company_name || null,
-            business_license: null,
-            tax_id: null,
-            languages: null,
-            specialties: null,
-            is_verified: false,
-            rating: 0,
-            total_rfqs: 0,
-            total_quotes: 0,
-            created_at: session.user.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          
-          setUser(basicUser);
+          // Try to fetch user profile from database with timeout
+          try {
+            const profilePromise = supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            const timeoutPromise = new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error('Profile fetch timeout')), 1000)
+            );
+            
+            const { data: userProfile, error: profileError } = await Promise.race([
+              profilePromise, 
+              timeoutPromise
+            ]) as any;
+            
+            if (userProfile && !profileError) {
+              setUser(userProfile as User);
+            } else {
+              throw new Error('Profile fetch failed');
+            }
+          } catch (error) {
+            console.log('Using session metadata fallback:', error);
+            // Fallback to user metadata from session if profile fetch fails
+            const basicUser: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              first_name: session.user.user_metadata?.first_name || '',
+              last_name: session.user.user_metadata?.last_name || '',
+              phone: session.user.user_metadata?.phone || '',
+              user_type: session.user.user_metadata?.user_type || 'buyer',
+              avatar_url: session.user.user_metadata?.avatar_url || null,
+              bio: null,
+              company_name: session.user.user_metadata?.company_name || null,
+              business_license: null,
+              tax_id: null,
+              languages: null,
+              specialties: null,
+              is_verified: false,
+              rating: 0,
+              total_rfqs: 0,
+              total_quotes: 0,
+              created_at: session.user.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            
+            setUser(basicUser);
+          }
           setToken(session.access_token);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -163,29 +212,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (data.user) {
-        const basicUser: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          first_name: data.user.user_metadata?.first_name || '',
-          last_name: data.user.user_metadata?.last_name || '',
-          phone: data.user.user_metadata?.phone || '',
-          user_type: data.user.user_metadata?.user_type || 'buyer',
-          avatar_url: data.user.user_metadata?.avatar_url || null,
-          bio: null,
-          company_name: data.user.user_metadata?.company_name || null,
-          business_license: null,
-          tax_id: null,
-          languages: null,
-          specialties: null,
-          is_verified: false,
-          rating: 0,
-          total_rfqs: 0,
-          total_quotes: 0,
-          created_at: data.user.created_at || new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
+        // Fetch complete user profile from database
+        const { data: userProfile, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
         
-        setUser(basicUser);
+        if (userProfile && !profileError) {
+          setUser(userProfile as User);
+        } else {
+          // Fallback to basic user object from session if profile fetch fails
+          const basicUser: User = {
+            id: data.user.id,
+            email: data.user.email || '',
+            first_name: data.user.user_metadata?.first_name || '',
+            last_name: data.user.user_metadata?.last_name || '',
+            phone: data.user.user_metadata?.phone || '',
+            user_type: data.user.user_metadata?.user_type || 'buyer',
+            avatar_url: data.user.user_metadata?.avatar_url || null,
+            bio: null,
+            company_name: data.user.user_metadata?.company_name || null,
+            business_license: null,
+            tax_id: null,
+            languages: null,
+            specialties: null,
+            is_verified: false,
+            rating: 0,
+            total_rfqs: 0,
+            total_quotes: 0,
+            created_at: data.user.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          setUser(basicUser);
+        }
+        
         setToken(data.session?.access_token || null);
       }
     } catch (error) {
