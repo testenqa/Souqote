@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/SimpleAuthContext';
+import { VendorSyncService } from '../../services/vendorSyncService';
+import toast from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -22,7 +24,6 @@ import {
   Shield
 } from 'lucide-react';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import toast from 'react-hot-toast';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -448,10 +449,31 @@ const AdminDashboard: React.FC = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Building className="w-5 h-5" />
-                <span>Vendor Verification</span>
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <Building className="w-5 h-5" />
+                  <span>Vendor Verification</span>
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const result = await VendorSyncService.syncAllVendorCompanyNames();
+                      if (result.success) {
+                        toast.success(`Successfully synced ${result.updatedCount || 0} vendor company names`);
+                      } else {
+                        toast.error(`Sync failed: ${result.error}`);
+                      }
+                    } catch (error) {
+                      toast.error('Failed to sync vendor data');
+                    }
+                  }}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Sync Company Names
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {vendorProfilesLoading ? (

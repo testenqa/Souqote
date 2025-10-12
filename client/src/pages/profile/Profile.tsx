@@ -124,7 +124,7 @@ const Profile: React.FC = () => {
                 <User className="w-5 h-5" />
                 <span>Personal Information</span>
               </button>
-              {user.user_type === 'vendor' && (
+              {(user.user_type === 'vendor' || user.user_type === 'buyer') && (
                 <button
                   onClick={() => setActiveTab('company')}
                   className={`${
@@ -134,7 +134,7 @@ const Profile: React.FC = () => {
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
                 >
                   <Building className="w-5 h-5" />
-                  <span>Company Information</span>
+                  <span>{user.user_type === 'buyer' ? 'Business Information' : 'Company Information'}</span>
                 </button>
               )}
             </nav>
@@ -189,15 +189,16 @@ const Profile: React.FC = () => {
           )}
 
           {/* Company Information Tab */}
-          {activeTab === 'company' && user.user_type === 'vendor' && (
+          {activeTab === 'company' && (
             <>
-              {isLoading ? (
-                <Card>
-                  <CardContent className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </CardContent>
-                </Card>
-              ) : vendorProfile ? (
+              {user.user_type === 'vendor' ? (
+                isLoading ? (
+                  <Card>
+                    <CardContent className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </CardContent>
+                  </Card>
+                ) : vendorProfile ? (
                   <Card>
                     <CardHeader>
                       <div className="flex items-center justify-between">
@@ -489,7 +490,135 @@ const Profile: React.FC = () => {
                     </CardContent>
                   </Card>
                 )
-              }
+              ) : user.user_type === 'buyer' ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Building className="w-5 h-5" />
+                      <span>Business Information</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Basic Business Information */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Company Name</p>
+                          <p className="font-medium">{user.company_name || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Your Position</p>
+                          <p className="font-medium">{user.position || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Business Type</p>
+                          <p className="font-medium">{user.business_type || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Industry</p>
+                          <p className="font-medium">{user.industry || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Company Size</p>
+                          <p className="font-medium">{user.company_size || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">TRN Number</p>
+                          <p className="font-medium">{user.trn_number || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact Information */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center space-x-2">
+                        <Phone className="w-5 h-5" />
+                        <span>Contact Information</span>
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Primary Phone</p>
+                          <p className="font-medium">{user.phone || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Alternative Phone</p>
+                          <p className="font-medium">{user.alternative_phone || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Email</p>
+                          <p className="font-medium">{user.email}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Contact Person</p>
+                          <p className="font-medium">{user.contact_person || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Business Address */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center space-x-2">
+                        <MapPin className="w-5 h-5" />
+                        <span>Business Address</span>
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <p className="text-sm text-gray-500">Address</p>
+                          <p className="font-medium">{user.address || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">City</p>
+                          <p className="font-medium">{user.city || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Emirate</p>
+                          <p className="font-medium">{user.emirate || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Postal Code</p>
+                          <p className="font-medium">{user.postal_code || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Online Presence */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center space-x-2">
+                        <Globe className="w-5 h-5" />
+                        <span>Online Presence</span>
+                      </h3>
+                      <div>
+                        <p className="text-sm text-gray-500">Website</p>
+                        {user.website ? (
+                          <a 
+                            href={user.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-medium text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                          >
+                            <span>{user.website}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <p className="font-medium">Not provided</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="pt-4 border-t">
+                      <div className="flex justify-end">
+                        <Link to="/profile/edit">
+                          <Button variant="outline">
+                            Edit Business Information
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
             </>
           )}
         </div>

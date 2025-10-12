@@ -10,19 +10,23 @@ import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConversationThread from '../../components/messages/ConversationThread';
 import { MessageCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { NotificationService } from '../../services/notificationService';
 
 const MyQuotes: React.FC = () => {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [showMessageThread, setShowMessageThread] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawReason, setWithdrawReason] = useState('');
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const { data: quotes, isLoading, error } = useQuery(
+  const { data: quotes, isLoading, error, refetch } = useQuery(
     ['my-quotes', user?.id, statusFilter],
     async () => {
       if (!user) return [];
@@ -65,12 +69,79 @@ const MyQuotes: React.FC = () => {
     { enabled: !!user }
   );
 
+  const canWithdrawQuote = (quote: Quote) => {
+    return quote.status === 'pending' || quote.status === 'expired';
+    // Note: cancelled quotes cannot be withdrawn
+  };
+
+  const handleWithdrawQuote = (quote: Quote) => {
+    if (!canWithdrawQuote(quote)) {
+      toast.error('Cannot withdraw this quote');
+      return;
+    }
+
+    setSelectedQuote(quote);
+    setShowWithdrawModal(true);
+    setWithdrawReason('');
+  };
+
+  const confirmWithdrawQuote = async () => {
+    if (!selectedQuote || !withdrawReason.trim()) {
+      toast.error('Please provide a reason for withdrawing the quote');
+      return;
+    }
+
+    try {
+      // Update quote status to withdrawn with reason
+      const { error: updateError } = await supabase
+        .from('quotes')
+        .update({ 
+          status: 'withdrawn', 
+          withdraw_reason: withdrawReason.trim(),
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', selectedQuote.id);
+
+      if (updateError) throw updateError;
+
+      // Notify the buyer
+      if (selectedQuote.rfq?.buyer?.id) {
+        await NotificationService.createNotification(
+          selectedQuote.rfq.buyer.id,
+          'quote_status_changed',
+          {
+            rfq_id: selectedQuote.rfq.id,
+            rfq_title: selectedQuote.rfq.title,
+            quote_id: selectedQuote.id,
+            change_type: 'quote_withdrawn',
+            vendor_name: user?.first_name + ' ' + user?.last_name,
+            withdraw_reason: withdrawReason.trim()
+          },
+          'Quote Withdrawn',
+          `A vendor has withdrawn their quote for "${selectedQuote.rfq.title}". Reason: ${withdrawReason.trim()}`
+        );
+      }
+
+      toast.success('Quote withdrawn successfully');
+      setShowWithdrawModal(false);
+      setWithdrawReason('');
+      setSelectedQuote(null);
+      // Refresh the data
+      refetch();
+    } catch (error) {
+      console.error('Error withdrawing quote:', error);
+      toast.error('Failed to withdraw quote. Please try again.');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'accepted': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       case 'expired': return 'bg-gray-100 text-gray-800';
+      case 'withdrawn': return 'bg-orange-100 text-orange-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -166,6 +237,16 @@ const MyQuotes: React.FC = () => {
           >
             Rejected ({quotes?.filter(quote => quote.status === 'rejected').length || 0})
           </button>
+          <button
+            onClick={() => setStatusFilter('cancelled')}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${
+              statusFilter === 'cancelled'
+                ? 'bg-red-100 text-red-800'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Cancelled ({quotes?.filter(quote => quote.status === 'cancelled').length || 0})
+          </button>
         </div>
       </div>
 
@@ -246,6 +327,15 @@ const MyQuotes: React.FC = () => {
                 </p>
               </div>
 
+              {/* Cancellation Reason */}
+              {quote.status === 'cancelled' && quote.rfq?.cancel_reason && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-800">
+                    <span className="font-medium">RFQ Cancelled:</span> {quote.rfq.cancel_reason}
+                  </p>
+                </div>
+              )}
+
               {quote.terms_conditions && (
                 <div className="mb-4">
                   <h4 className="font-medium text-gray-900 mb-2">Terms & Conditions:</h4>
@@ -269,6 +359,16 @@ const MyQuotes: React.FC = () => {
                       View RFQ
                     </Button>
                   </Link>
+                  {canWithdrawQuote(quote) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleWithdrawQuote(quote)}
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    >
+                      Withdraw Quote
+                    </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -329,6 +429,59 @@ const MyQuotes: React.FC = () => {
                 setSelectedQuote(null);
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Quote Modal */}
+      {showWithdrawModal && selectedQuote && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Withdraw Quote
+              </h3>
+              <p className="text-gray-600 mb-4">
+                You are about to withdraw your quote for "{selectedQuote.rfq?.title}". 
+                The buyer will be notified with your reason.
+              </p>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for withdrawal <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={withdrawReason}
+                  onChange={(e) => setWithdrawReason(e.target.value)}
+                  placeholder="Please provide a reason for withdrawing this quote..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                  required
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  This reason will be shared with the buyer.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowWithdrawModal(false);
+                    setWithdrawReason('');
+                    setSelectedQuote(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmWithdrawQuote}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Withdraw Quote
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

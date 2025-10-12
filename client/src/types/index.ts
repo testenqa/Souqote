@@ -18,6 +18,19 @@ export interface User {
   total_quotes: number;
   created_at: string;
   updated_at: string;
+  // Buyer-specific fields
+  position?: string | null;
+  trn_number?: string | null;
+  business_type?: string | null;
+  industry?: string | null;
+  company_size?: string | null;
+  website?: string | null;
+  address?: string | null;
+  city?: string | null;
+  emirate?: string | null;
+  postal_code?: string | null;
+  contact_person?: string | null;
+  alternative_phone?: string | null;
 }
 
 export interface UserProfile {
@@ -82,6 +95,7 @@ export interface RFQ {
   contact_person_phone?: string;
   project_reference?: string;
   service_type?: string;
+  cancel_reason?: string;
   created_at: string;
   updated_at: string;
   buyer?: User;
@@ -111,7 +125,7 @@ export interface Quote {
   delivery_time: string;
   message: string;
   terms_conditions?: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'withdrawn';
+  status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'withdrawn' | 'cancelled';
   attachments?: string[] | null;
   // Item-level quoting fields
   is_partial_quote: boolean;

@@ -2,11 +2,12 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { supabase } from '../../lib/supabase';
-import { User, Quote } from '../../types';
+import { User, Quote, VendorProfile as VendorProfileType } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { Building, MapPin, Phone, Mail, Globe, Users, Award, Shield, Calendar, FileText, CheckCircle } from 'lucide-react';
 
 const VendorProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,21 @@ const VendorProfile: React.FC = () => {
       
       if (error) throw error;
       return data as User;
+    },
+    { enabled: !!id }
+  );
+
+  const { data: vendorProfile, isLoading: profileLoading } = useQuery(
+    ['vendor-profile', id],
+    async () => {
+      const { data, error } = await supabase
+        .from('vendor_profiles')
+        .select('*')
+        .eq('user_id', id)
+        .single();
+      
+      if (error) throw error;
+      return data as VendorProfileType;
     },
     { enabled: !!id }
   );
@@ -122,7 +138,7 @@ const VendorProfile: React.FC = () => {
     });
   };
 
-  if (vendorLoading) return <LoadingSpinner />;
+  if (vendorLoading || profileLoading) return <LoadingSpinner />;
   if (!vendor) return <div className="text-red-500">Vendor not found</div>;
 
   return (
@@ -132,6 +148,8 @@ const VendorProfile: React.FC = () => {
           ← Back to Vendors
         </Link>
       </div>
+
+      {/* Debug section removed - issue identified and resolved */}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Vendor Profile */}
@@ -221,6 +239,336 @@ const VendorProfile: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Detailed Vendor Profile Information */}
+          {vendorProfile ? (
+            <>
+              {/* Company Information */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Building className="w-5 h-5" />
+                    <span>Company Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-sm text-gray-500">Company Name (English)</span>
+                        <p className="font-medium">{vendorProfile.company_name_english}</p>
+                      </div>
+                      {vendorProfile.company_name_arabic && (
+                        <div>
+                          <span className="text-sm text-gray-500">Company Name (Arabic)</span>
+                          <p className="font-medium">{vendorProfile.company_name_arabic}</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-sm text-gray-500">Trade License Number</span>
+                        <p className="font-medium">{vendorProfile.trade_license_number}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-500">Issuing Authority</span>
+                        <p className="font-medium">{vendorProfile.issuing_authority}</p>
+                      </div>
+                      {vendorProfile.license_activity && (
+                        <div>
+                          <span className="text-sm text-gray-500">License Activity</span>
+                          <p className="font-medium">{vendorProfile.license_activity}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-sm text-gray-500">Company Type</span>
+                        <p className="font-medium">{vendorProfile.company_type}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-500">License Expiry Date</span>
+                        <p className="font-medium">{new Date(vendorProfile.license_expiry_date).toLocaleDateString()}</p>
+                      </div>
+                      {vendorProfile.establishment_date && (
+                        <div>
+                          <span className="text-sm text-gray-500">Establishment Date</span>
+                          <p className="font-medium">{new Date(vendorProfile.establishment_date).toLocaleDateString()}</p>
+                        </div>
+                      )}
+                      {vendorProfile.tax_registration_number && (
+                        <div>
+                          <span className="text-sm text-gray-500">Tax Registration Number</span>
+                          <p className="font-medium">{vendorProfile.tax_registration_number}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Business Location */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <MapPin className="w-5 h-5" />
+                    <span>Business Location</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-sm text-gray-500">Registered Office Address</span>
+                      <p className="font-medium">{vendorProfile.registered_office_address}</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-sm text-gray-500">Emirate</span>
+                        <p className="font-medium">{vendorProfile.emirate}</p>
+                      </div>
+                      {vendorProfile.makani_number && (
+                        <div>
+                          <span className="text-sm text-gray-500">Makani Number</span>
+                          <p className="font-medium">{vendorProfile.makani_number}</p>
+                        </div>
+                      )}
+                    </div>
+                    {vendorProfile.google_maps_url && (
+                      <div>
+                        <span className="text-sm text-gray-500">Google Maps</span>
+                        <a 
+                          href={vendorProfile.google_maps_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          View on Google Maps
+                        </a>
+                      </div>
+                    )}
+                    {vendorProfile.branch_locations && vendorProfile.branch_locations.length > 0 && (
+                      <div>
+                        <span className="text-sm text-gray-500">Branch Locations</span>
+                        <ul className="mt-1 space-y-1">
+                          {vendorProfile.branch_locations.map((location, index) => (
+                            <li key={index} className="font-medium">• {location}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Contact Information */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Phone className="w-5 h-5" />
+                    <span>Contact Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-sm text-gray-500">Authorized Person</span>
+                        <p className="font-medium">{vendorProfile.authorized_person_name}</p>
+                      </div>
+                      {vendorProfile.designation && (
+                        <div>
+                          <span className="text-sm text-gray-500">Designation</span>
+                          <p className="font-medium">{vendorProfile.designation}</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-sm text-gray-500">Business Email</span>
+                        <p className="font-medium">{vendorProfile.business_email}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-500">Business Phone</span>
+                        <p className="font-medium">{vendorProfile.business_phone}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {vendorProfile.whatsapp_number && (
+                        <div>
+                          <span className="text-sm text-gray-500">WhatsApp</span>
+                          <p className="font-medium">{vendorProfile.whatsapp_number}</p>
+                        </div>
+                      )}
+                      {vendorProfile.company_website && (
+                        <div>
+                          <span className="text-sm text-gray-500">Website</span>
+                          <a 
+                            href={vendorProfile.company_website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {vendorProfile.company_website}
+                          </a>
+                        </div>
+                      )}
+                      {vendorProfile.linkedin_url && (
+                        <div>
+                          <span className="text-sm text-gray-500">LinkedIn</span>
+                          <a 
+                            href={vendorProfile.linkedin_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            View LinkedIn Profile
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Business Operations */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="w-5 h-5" />
+                    <span>Business Operations</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-sm text-gray-500">Business Category</span>
+                        <p className="font-medium">{vendorProfile.business_category}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-500">Main Services Offered</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {vendorProfile.main_services_offered.map((service, index) => (
+                            <Badge key={index} variant="secondary">{service}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {vendorProfile.years_experience_uae && (
+                        <div>
+                          <span className="text-sm text-gray-500">Years of Experience in UAE</span>
+                          <p className="font-medium">{vendorProfile.years_experience_uae} years</p>
+                        </div>
+                      )}
+                      {vendorProfile.staff_strength && (
+                        <div>
+                          <span className="text-sm text-gray-500">Staff Strength</span>
+                          <p className="font-medium">{vendorProfile.staff_strength} employees</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-4">
+                      {vendorProfile.certifications && vendorProfile.certifications.length > 0 && (
+                        <div>
+                          <span className="text-sm text-gray-500">Certifications</span>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {vendorProfile.certifications.map((cert, index) => (
+                              <Badge key={index} variant="outline">{cert}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {vendorProfile.major_clients && vendorProfile.major_clients.length > 0 && (
+                        <div>
+                          <span className="text-sm text-gray-500">Major Clients</span>
+                          <ul className="mt-1 space-y-1">
+                            {vendorProfile.major_clients.map((client, index) => (
+                              <li key={index} className="font-medium">• {client}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Compliance & Legal */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Shield className="w-5 h-5" />
+                    <span>Compliance & Legal</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">UAE Labour Law Compliance: {vendorProfile.uae_labour_law_compliance ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">MOHRE Requirements: {vendorProfile.mohre_requirements_compliance ? 'Yes' : 'No'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm">VAT Compliance: {vendorProfile.vat_compliance ? 'Yes' : 'No'}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {vendorProfile.insurance_details && (
+                        <div>
+                          <span className="text-sm text-gray-500">Insurance Details</span>
+                          <p className="font-medium">{vendorProfile.insurance_details}</p>
+                        </div>
+                      )}
+                      {vendorProfile.chamber_of_commerce_number && (
+                        <div>
+                          <span className="text-sm text-gray-500">Chamber of Commerce Number</span>
+                          <p className="font-medium">{vendorProfile.chamber_of_commerce_number}</p>
+                        </div>
+                      )}
+                      {vendorProfile.mohre_workers_count && (
+                        <div>
+                          <span className="text-sm text-gray-500">MOHRE Workers Count</span>
+                          <p className="font-medium">{vendorProfile.mohre_workers_count}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            /* No Detailed Profile - Show Message */
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building className="w-5 h-5" />
+                  <span>Detailed Profile Not Available</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Building className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Detailed Profile Not Found
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    This vendor hasn't completed their detailed profile setup. 
+                    The vendor needs to complete the vendor onboarding process to show comprehensive business information.
+                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-900 mb-2">For the Vendor:</h4>
+                    <p className="text-blue-800 text-sm">
+                      Please complete your vendor profile by going to the vendor onboarding section 
+                      to provide detailed business information including company details, 
+                      business location, contact information, and compliance status.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Recent Quotes */}
           <Card className="mb-6">

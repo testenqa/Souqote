@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+// Debug components removed - issue resolved
 
 const Vendors: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +21,6 @@ const Vendors: React.FC = () => {
         .from('users')
         .select('*')
         .eq('user_type', 'vendor')
-        .eq('is_verified', true)
         .order('rating', { ascending: false });
 
       if (searchTerm) {
@@ -36,7 +36,11 @@ const Vendors: React.FC = () => {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      if (error) {
+        throw error;
+      }
+      
       return data as User[];
     }
   );
@@ -85,15 +89,32 @@ const Vendors: React.FC = () => {
     return stars;
   };
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-500">Error loading vendors</div>;
+  if (isLoading) return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center py-12">
+        <LoadingSpinner />
+        <p className="text-gray-500 mt-4">Loading vendors...</p>
+      </div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center py-12">
+        <div className="text-red-500 text-lg mb-2">Error loading vendors</div>
+        <p className="text-gray-500">Please try refreshing the page</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Verified Vendors</h1>
-        <p className="text-gray-600">Find trusted vendors for your business needs on Souqote</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Registered Vendors</h1>
+        <p className="text-gray-600">Browse and connect with vendors for your business needs on Souqote</p>
       </div>
+
+      {/* Debug components removed - vendor company name sync issue resolved */}
 
       {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
@@ -162,6 +183,16 @@ const Vendors: React.FC = () => {
         </div>
       </div>
 
+      {/* Results Count */}
+      {vendors && vendors.length > 0 && (
+        <div className="mb-4">
+          <p className="text-gray-600">
+            Showing {vendors.length} vendor{vendors.length !== 1 ? 's' : ''}
+            {(searchTerm || selectedSpecialty || minRating) && ' matching your criteria'}
+          </p>
+        </div>
+      )}
+
       {/* Vendors Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {vendors?.map((vendor) => (
@@ -175,10 +206,10 @@ const Vendors: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-lg font-semibold text-gray-900">
-                    {`${vendor.first_name || ''} ${vendor.last_name || ''}`.trim() || vendor.company_name || 'Vendor'}
+                    {vendor.company_name || `${vendor.first_name || ''} ${vendor.last_name || ''}`.trim() || 'Vendor'}
                   </CardTitle>
                   {vendor.company_name && vendor.first_name && (
-                    <p className="text-sm text-gray-600">{vendor.company_name}</p>
+                    <p className="text-sm text-gray-600">{`${vendor.first_name || ''} ${vendor.last_name || ''}`.trim()}</p>
                   )}
                 </div>
               </div>
@@ -264,7 +295,7 @@ const Vendors: React.FC = () => {
           <p className="text-gray-500">
             {searchTerm || selectedSpecialty || minRating
               ? 'Try adjusting your search criteria'
-              : 'No verified vendors are currently available'}
+              : 'No vendors are currently registered'}
           </p>
         </div>
       )}

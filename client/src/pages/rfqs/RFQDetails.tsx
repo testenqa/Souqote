@@ -14,6 +14,8 @@ import QuoteItemsDisplay from '../../components/QuoteItemsDisplay';
 import { getUserDisplayName } from '../../lib/utils';
 import { FileText, Image, MessageCircle } from 'lucide-react';
 import ConversationThread from '../../components/messages/ConversationThread';
+import VendorProfileModal from '../../components/vendor/VendorProfileModal';
+import BuyerProfileModal from '../../components/buyer/BuyerProfileModal';
 import { NotificationService } from '../../services/notificationService';
 import toast from 'react-hot-toast';
 
@@ -25,6 +27,10 @@ const RFQDetails: React.FC = () => {
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showMessageThread, setShowMessageThread] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [showVendorModal, setShowVendorModal] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [showBuyerModal, setShowBuyerModal] = useState(false);
+  const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -334,6 +340,18 @@ const RFQDetails: React.FC = () => {
     }));
   }, [rfq?.items?.length]);
 
+  // Handle opening vendor profile modal
+  const handleOpenVendorProfile = (vendorId: string) => {
+    setSelectedVendorId(vendorId);
+    setShowVendorModal(true);
+  };
+
+  // Handle opening buyer profile modal
+  const handleOpenBuyerProfile = (buyerId: string) => {
+    setSelectedBuyerId(buyerId);
+    setShowBuyerModal(true);
+  };
+
   // Check if vendor has already submitted a quote (excluding withdrawn quotes)
   const vendorQuote = quotes?.find(q => q.vendor_id === user?.id && q.status !== 'withdrawn');
   const canSubmitQuote = user?.user_type === 'vendor' && rfq?.status === 'open' && !vendorQuote;
@@ -352,9 +370,21 @@ const RFQDetails: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{rfq.title}</h1>
             <div className="flex items-center space-x-4 text-gray-600">
-              <span>By {getUserDisplayName(rfq.buyer, 'Buyer')}</span>
+              <span>By 
+                <span 
+                  className="text-blue-600 hover:text-blue-800 cursor-pointer transition-colors ml-1"
+                  onClick={() => rfq.buyer?.id && handleOpenBuyerProfile(rfq.buyer.id)}
+                >
+                  {getUserDisplayName(rfq.buyer, 'Buyer')}
+                </span>
+              </span>
               {rfq.buyer?.company_name && (
-                <span>• {rfq.buyer.company_name}</span>
+                <span 
+                  className="text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
+                  onClick={() => rfq.buyer?.id && handleOpenBuyerProfile(rfq.buyer.id)}
+                >
+                  • {rfq.buyer.company_name}
+                </span>
               )}
               <Badge className={getUrgencyColor(rfq.urgency)}>
                 {rfq.urgency}
@@ -974,7 +1004,10 @@ const RFQDetails: React.FC = () => {
                     }`}>
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="font-semibold text-gray-900">
+                          <h4 
+                            className="font-semibold text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
+                            onClick={() => handleOpenVendorProfile(quote.vendor_id)}
+                          >
                             {getUserDisplayName(quote.vendor, 'Vendor')}
                           </h4>
                           {quote.vendor?.company_name && (
@@ -1138,11 +1171,19 @@ const RFQDetails: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="font-medium">
+                  <p 
+                    className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
+                    onClick={() => rfq.buyer?.id && handleOpenBuyerProfile(rfq.buyer.id)}
+                  >
                     {getUserDisplayName(rfq.buyer, 'Buyer')}
                   </p>
                   {rfq.buyer.company_name && (
-                    <p className="text-gray-600">{rfq.buyer.company_name}</p>
+                    <p 
+                      className="text-gray-600 text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
+                      onClick={() => rfq.buyer?.id && handleOpenBuyerProfile(rfq.buyer.id)}
+                    >
+                      {rfq.buyer.company_name}
+                    </p>
                   )}
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-500">Rating:</span>
@@ -1196,6 +1237,30 @@ const RFQDetails: React.FC = () => {
             />
           </div>
         </div>
+      )}
+
+      {/* Vendor Profile Modal */}
+      {selectedVendorId && (
+        <VendorProfileModal
+          vendorId={selectedVendorId}
+          isOpen={showVendorModal}
+          onClose={() => {
+            setShowVendorModal(false);
+            setSelectedVendorId(null);
+          }}
+        />
+      )}
+
+      {/* Buyer Profile Modal */}
+      {selectedBuyerId && (
+        <BuyerProfileModal
+          buyerId={selectedBuyerId}
+          isOpen={showBuyerModal}
+          onClose={() => {
+            setShowBuyerModal(false);
+            setSelectedBuyerId(null);
+          }}
+        />
       )}
     </div>
   );

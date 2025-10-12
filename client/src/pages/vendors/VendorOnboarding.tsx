@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { CheckCircle, Circle, AlertCircle, Building, MapPin, User, Users, Briefcase, CreditCard, FileText, Settings, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { VendorSyncService } from '../../services/vendorSyncService';
 
 // Import step components
 import Step1CompanyInfo from './onboarding/Step1CompanyInfo';
@@ -288,6 +289,13 @@ const VendorOnboarding: React.FC = () => {
 
       if (result.error) {
         throw result.error;
+      }
+
+      // Sync company name to users table using the sync service
+      const syncResult = await VendorSyncService.syncCompanyName(user.id);
+      if (!syncResult.success) {
+        console.warn('Failed to sync company name to users table:', syncResult.error);
+        // Don't throw error here as the main profile was saved successfully
       }
 
       toast.success('Vendor profile created successfully!');

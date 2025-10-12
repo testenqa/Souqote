@@ -110,7 +110,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               total_rfqs: 0,
               total_quotes: 0,
               created_at: session.user.created_at || new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              // Buyer-specific fields
+              position: null,
+              trn_number: null,
+              business_type: null,
+              industry: null,
+              company_size: null,
+              website: null,
+              address: null,
+              city: null,
+              emirate: null,
+              postal_code: null,
+              contact_person: null,
+              alternative_phone: null
             };
             
             setUser(basicUser);
@@ -174,7 +187,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               total_rfqs: 0,
               total_quotes: 0,
               created_at: session.user.created_at || new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              // Buyer-specific fields
+              position: null,
+              trn_number: null,
+              business_type: null,
+              industry: null,
+              company_size: null,
+              website: null,
+              address: null,
+              city: null,
+              emirate: null,
+              postal_code: null,
+              contact_person: null,
+              alternative_phone: null
             };
             
             setUser(basicUser);
@@ -310,7 +336,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               total_rfqs: 0,
               total_quotes: 0,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              // Buyer-specific fields
+              position: null,
+              trn_number: null,
+              business_type: null,
+              industry: null,
+              company_size: null,
+              website: null,
+              address: null,
+              city: null,
+              emirate: null,
+              postal_code: null,
+              contact_person: null,
+              alternative_phone: null
             });
 
           if (profileError) {
@@ -352,7 +391,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Failed to update profile');
       }
 
-      setUser({ ...user, ...updates });
+      // Refresh user data from database to ensure we have the latest information
+      const { data: updatedUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (updatedUser && !fetchError) {
+        setUser(updatedUser as User);
+      } else {
+        // Fallback to local update if database fetch fails
+        setUser({ ...user, ...updates });
+      }
     } catch (error) {
       throw error;
     }
